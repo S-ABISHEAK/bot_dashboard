@@ -19,6 +19,7 @@
   --warn:    #f59e0b;
   --reroute: #fb923c;
   --charge:  #ef4444;
+  --err:     #f43f5e;
   --comms:   #a855f7;
   --idle:    #64748b;
 
@@ -102,6 +103,7 @@ svg{fill:currentColor;stroke:currentColor}
 .conn.offline i{background:var(--charge);box-shadow:0 0 0 3px #ef444422}
 
 /* ───────────────── toolbar ───────────────── */
+.toolbar[hidden]{display:none}
 .toolbar{
   display:flex;flex-wrap:wrap;gap:10px;
   background:var(--panel);

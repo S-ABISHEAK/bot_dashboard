@@ -88,7 +88,41 @@
       <span class="tgroup-label">Video</span>
       <button class="btn" id="btnExport">Export MP4</button>
     </div>
+
+    <div class="tgroup">
+      <span class="tgroup-label">Layout</span>
+      <button class="btn btn-arm" id="btnEditLayout">Edit Layout</button>
+      <button class="btn" id="btnResetLayout">Reset to Default</button>
+    </div>
   </div>
+
+  <!-- ───────────────── layout editor toolbar (hidden outside edit mode) ───────────────── -->
+  <div class="toolbar" id="layoutPalette" hidden>
+    <div class="tgroup">
+      <span class="tgroup-label">Tool</span>
+      <div class="seg" id="paletteSeg">
+        <button data-tool="blocked" class="on">Rack</button>
+        <button data-tool="pickup">Pickup</button>
+        <button data-tool="dropoff">Dropoff</button>
+        <button data-tool="charger">Charger</button>
+        <button data-tool="depot">Depot</button>
+        <button data-tool="erase">Erase</button>
+      </div>
+      <span class="hint">click to place a station · click-drag to paint racks/erase</span>
+      <span class="hint" id="paletteCounts"></span>
+    </div>
+    <div class="tgroup">
+      <span class="tgroup-label">Editor</span>
+      <button class="btn" id="btnLayoutValidate">Validate</button>
+      <button class="btn btn-primary" id="btnLayoutApply">Apply Layout</button>
+      <button class="btn" id="btnLayoutClearCanvas">Clear Canvas</button>
+      <button class="btn" id="btnLayoutCancel">Cancel</button>
+    </div>
+  </div>
+  <section class="panel" id="layoutErrorsPanel" hidden>
+    <div class="panel-hd"><h2>Layout Editor — issues</h2><span class="hint" id="layoutStatusHint"></span></div>
+    <ul class="eventlog" id="layoutErrors"></ul>
+  </section>
 
   <!-- ───────────────── content ───────────────── -->
   <div class="content" id="content">

@@ -34,16 +34,18 @@ def _c(cell):
 
 class Simulation:
     def __init__(self, n_robots=C.N_ROBOTS, n_tasks=C.N_TASKS,
-                 seed=C.RANDOM_SEED, scripted=False, coordination="stack"):
+                 seed=C.RANDOM_SEED, scripted=False, coordination="stack",
+                 custom_layout=None):
         self.n = int(max(1, min(C.MAX_ROBOTS, n_robots)))
         self.n_tasks = int(max(1, min(C.MAX_TASKS, n_tasks)))
         self.seed = int(seed)
         self.scripted = scripted
         self.coordination = coordination
-        self._cfg = dict(n_robots=self.n, n_tasks=self.n_tasks, seed=self.seed)
+        self._cfg = dict(n_robots=self.n, n_tasks=self.n_tasks, seed=self.seed,
+                         custom_layout=bool(custom_layout))
 
         self.rng = np.random.default_rng(self.seed)
-        self.world = World()
+        self.world = World(custom_layout=custom_layout)
         self.pibt = PIBT(self.world, seed=self.seed)
         self.coord = (StopWaitStrategy() if coordination == "stopwait"
                       else StackStrategy())
@@ -55,8 +57,9 @@ class Simulation:
         self._df_cache = {}
         self._map_version = 0
 
+        starts = self._resolve_robot_starts(custom_layout)
         self.robots = [
-            Robot(i, C.ROBOT_NAMES[i], C.ROBOT_STARTS[i], C.ROBOT_COLORS[i],
+            Robot(i, C.ROBOT_NAMES[i], starts[i], C.ROBOT_COLORS[i],
                   priority=i, battery=float(self.rng.uniform(*C.BATTERY_START)))
             for i in range(self.n)
         ]
@@ -96,6 +99,28 @@ class Simulation:
             b = tuple(d[int(self.rng.integers(len(d)))])
             tasks.append(Task(i, a, b))
         return tasks
+
+    def _resolve_robot_starts(self, custom_layout):
+        """Where each robot spawns.  Default layout keeps the scripted
+        ROBOT_STARTS positions unchanged; a custom layout has no such list,
+        so robots start in depot bays (falling back to any free, non-station
+        cell if there aren't enough bays for the fleet size)."""
+        if custom_layout is None:
+            return [C.ROBOT_STARTS[i] for i in range(self.n)]
+        starts = list(self.world.depot[:self.n])
+        if len(starts) < self.n:
+            taken = (set(self.world.pickups) | set(self.world.dropoffs)
+                     | set(self.world.chargers) | set(starts))
+            for y in range(self.world.h):
+                for x in range(self.world.w):
+                    if len(starts) >= self.n:
+                        break
+                    if self.world.is_free(x, y) and (x, y) not in taken:
+                        starts.append((x, y))
+                        taken.add((x, y))
+                if len(starts) >= self.n:
+                    break
+        return starts[:self.n]
 
     # ------------------------------------------------------------------
     def _distance_field(self, goal):

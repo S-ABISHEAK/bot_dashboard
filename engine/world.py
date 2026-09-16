@@ -7,17 +7,20 @@ from . import config as C
 
 
 class World:
-    def __init__(self):
+    def __init__(self, custom_layout=None):
         self.w = C.GRID_W
         self.h = C.GRID_H
         self.grid = np.zeros((self.h, self.w), dtype=bool)
         self.dynamic_obstacles = []          # (x, y) cells dropped at runtime
-        self._build_static_layout()
 
-        self.pickups = [tuple(p) for p in C.PICKUPS]
-        self.dropoffs = [tuple(p) for p in C.DROPOFFS]
-        self.chargers = [tuple(p) for p in C.CHARGERS]
-        self.depot = [tuple(p) for p in C.DEPOT]      # standby parking bays
+        if custom_layout is None:
+            self._build_static_layout()
+            self.pickups = [tuple(p) for p in C.PICKUPS]
+            self.dropoffs = [tuple(p) for p in C.DROPOFFS]
+            self.chargers = [tuple(p) for p in C.CHARGERS]
+            self.depot = [tuple(p) for p in C.DEPOT]      # standby parking bays
+        else:
+            self._build_custom_layout(custom_layout)
 
     # ------------------------------------------------------------------
     def _build_static_layout(self):
@@ -30,6 +33,17 @@ class World:
                     continue                 # vertical cross-aisle
                 g[r0, x] = True
                 g[r1, x] = True
+
+    def _build_custom_layout(self, custom_layout):
+        g = self.grid
+        g[0, :] = g[-1, :] = True
+        g[:, 0] = g[:, -1] = True
+        for (x, y) in custom_layout.get("blocked", ()):
+            g[y, x] = True
+        self.pickups = [tuple(p) for p in custom_layout.get("pickups", ())]
+        self.dropoffs = [tuple(p) for p in custom_layout.get("dropoffs", ())]
+        self.chargers = [tuple(p) for p in custom_layout.get("chargers", ())]
+        self.depot = [tuple(p) for p in custom_layout.get("depot", ())]
 
     # ------------------------------------------------------------------
     def add_obstacle(self, x, y):

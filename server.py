@@ -286,7 +286,9 @@ async def api_config(payload: dict):
 
 @app.get("/api/layout")
 async def api_layout_get():
-    return {"custom_layout": session.custom_layout}
+    # whatever is actually running right now, painted or default alike -
+    # this is what "Edit Layout" pre-seeds from and "Save Current" captures
+    return {"custom_layout": session.custom_layout or session.sim.world.as_custom_layout()}
 
 
 @app.post("/api/layout/validate")

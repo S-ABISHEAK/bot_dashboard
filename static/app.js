@@ -954,6 +954,17 @@ $("savedLayoutsBody").addEventListener("click", (e) => {
   else if (act === "delete") deleteSavedLayout(id, name);
 });
 
+$("btnSaveCurrentLayout").onclick = async () => {
+  const name = prompt("Save the currently running layout as:");
+  if (name == null) return;
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const current = await fetch("/api/layout").then(r => r.json());
+  const res = await post("/api/layouts", { name: trimmed, layout: current.custom_layout }).then(r => r.json());
+  if (res.ok) fetchAndRenderSavedLayouts();
+  else alert(res.errors.join("\n"));
+};
+
 $("btnSaveAsLayout").onclick = async () => {
   const name = $("saveAsName").value.trim();
   if (!name) { renderLayoutErrors(["a name is required"]); return; }

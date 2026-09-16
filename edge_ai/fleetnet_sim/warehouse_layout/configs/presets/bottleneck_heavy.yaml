@@ -1,0 +1,8 @@
+# Reference only (see configs/default.yaml's header note).
+# Equivalent CLI usage: `fleetnet_layout generate --preset bottleneck_heavy`
+# Source of truth: fleetnet_layout/config/presets.py:PRESETS["bottleneck_heavy"]
+archetype: u_flow          # single dock wall, storage loops around one block
+dock_wall: south
+irregularity_level: 0.1    # low irregularity keeps the loop clean, concentrating
+                            # traffic through the loop's intersections rather
+                            # than dispersing it around column notches

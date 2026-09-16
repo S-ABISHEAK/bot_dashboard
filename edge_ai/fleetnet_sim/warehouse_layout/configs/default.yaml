@@ -1,0 +1,26 @@
+# Illustrative reference only — the CLI/`generation.sampling.sample_config`
+# does not read this file yet; it documents the shape of a fully-specified
+# LayoutConfig (fleetnet_layout/config/schema.py) for humans and for a
+# future --config-file CLI flag. To pin any of these fields today, use the
+# matching CLI flag (--scale, --industry, --archetype, --irregularity) or
+# a preset (see presets/, or fleetnet_layout/config/presets.py).
+
+warehouse:
+  seed: 42
+  scale_class: medium        # small | medium | large | very_large
+  industry_type: ecommerce   # see config/enums.py:IndustryType
+  archetype: grid            # see config/enums.py:Archetype
+
+structural_constraints:
+  dock_wall: south           # south | north (see README's Known Limitations)
+  column_grid_spacing_m: 11.0
+  fire_lane_width_m: 3.0
+
+constraints:
+  min_clearance_m: 0.15
+  require_full_connectivity: true
+  require_dual_egress_paths: false
+
+diversity_controls:
+  irregularity_level: 0.2
+  zone_arrangement_variant: 0

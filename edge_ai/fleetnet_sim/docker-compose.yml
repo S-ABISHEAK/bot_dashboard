@@ -1,0 +1,16 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: fleetnet_sim_timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fleetnet
+      POSTGRES_PASSWORD: fleetnet
+      POSTGRES_DB: fleetnet_sim
+    ports:
+      - "5432:5432"
+    volumes:
+      - fleetnet_sim_pgdata:/var/lib/postgresql/data
+
+volumes:
+  fleetnet_sim_pgdata:

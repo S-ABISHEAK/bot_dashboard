@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+outputs/runs/*
+!outputs/runs/.gitkeep
+outputs/datasets/*
+!outputs/datasets/.gitkeep
+.env
+
+# === Generated warehouse layouts & reports (warehouse_layout) ===
+# Regenerable via `warehouse_layout/examples/generate_batch.py` / the
+# dashboard's Create Layout tab -- kept out of version control since
+# the library is large (100+ JSON files) and reproducible from the
+# generator + a seed. Remove these two lines if you'd rather version
+# the layout library itself (e.g. to pin a known-good set of test
+# layouts). .venv/, __pycache__/, *.egg-info/ above already cover
+# warehouse_layout's own copies of those (no leading slash = any depth).
+warehouse_layout/outputs/
+warehouse_layout/build/

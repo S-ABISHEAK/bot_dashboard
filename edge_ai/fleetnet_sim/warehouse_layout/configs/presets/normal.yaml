@@ -1,0 +1,7 @@
+# Reference only (see configs/default.yaml's header note).
+# Equivalent CLI usage: `fleetnet_layout generate --preset normal`
+# Source of truth: fleetnet_layout/config/presets.py:PRESETS["normal"]
+scale_class: null       # unpinned — sampled per Section K's weighted categoricals
+industry_type: null
+archetype: null
+irregularity_level: null

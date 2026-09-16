@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fleetnet-layout"
+version = "0.1.0"
+description = "FleetNet procedural warehouse layout generator (environment foundation)"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "shapely>=2.0",
+    "networkx>=3.2",
+    "pydantic>=2.4",
+    "matplotlib>=3.8",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+include = ["fleetnet_layout*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

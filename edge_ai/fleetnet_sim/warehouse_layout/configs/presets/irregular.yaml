@@ -1,0 +1,5 @@
+# Reference only (see configs/default.yaml's header note).
+# Equivalent CLI usage: `fleetnet_layout generate --preset irregular`
+# Source of truth: fleetnet_layout/config/presets.py:PRESETS["irregular"]
+archetype: grid
+irregularity_level: 0.9   # dense column-grid notching (generation/constraints.py)

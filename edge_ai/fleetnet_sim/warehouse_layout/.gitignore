@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+outputs/layouts/*
+!outputs/layouts/.gitkeep
+outputs/renders/*
+!outputs/renders/.gitkeep
+outputs/reports/*
+!outputs/reports/.gitkeep

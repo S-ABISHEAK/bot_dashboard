@@ -1,0 +1,7 @@
+# Reference only (see configs/default.yaml's header note).
+# Equivalent CLI usage: `fleetnet_layout generate --preset high_density`
+# Source of truth: fleetnet_layout/config/presets.py:PRESETS["high_density"]
+scale_class: medium
+industry_type: ecommerce   # Beta-distribution storage_density mode is highest
+                            # for ecommerce (config/defaults.py:INDUSTRY_STORAGE_DENSITY_BETA)
+archetype: zone_based

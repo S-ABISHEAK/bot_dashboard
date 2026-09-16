@@ -1,0 +1,5 @@
+# Reference only (see configs/default.yaml's header note).
+# Equivalent CLI usage: `fleetnet_layout generate --preset multi_zone`
+# Source of truth: fleetnet_layout/config/presets.py:PRESETS["multi_zone"]
+archetype: zone_based   # 2-4 independently-parameterized sub-fields (different
+                          # rack type/density each), see generation/archetypes/zone_based.py

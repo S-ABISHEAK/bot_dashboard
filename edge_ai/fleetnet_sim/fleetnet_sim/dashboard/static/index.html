@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FleetNet Dashboard</title>
+  <link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>FleetNet Dashboard</h1>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="layouts">Layouts</button>
+      <button class="tab-btn" data-tab="launch">Launch Simulation</button>
+      <button class="tab-btn" data-tab="create">Create Layout</button>
+      <button class="tab-btn" data-tab="watch">Watch</button>
+      <button class="tab-btn" data-tab="runs">Run History</button>
+      <button class="tab-btn" data-tab="report">Report</button>
+      <button class="tab-btn" data-tab="datasets">Datasets</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="tab-layouts" class="tab-panel active">
+      <div class="panel-split">
+        <div class="panel-list">
+          <h2>Generated Layouts</h2>
+          <table id="layoutTable">
+            <thead>
+              <tr><th>Layout</th><th>Archetype</th><th>Scale</th><th>Industry</th><th>Area (m²)</th><th>Valid</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="panel-view">
+          <div class="view-toolbar">
+            <label><input type="checkbox" id="toggleGraph" checked /> Nav graph</label>
+            <label><input type="checkbox" id="toggleExclusions" checked /> Columns/exclusions</label>
+            <label><input type="checkbox" id="toggleBottlenecks" checked /> Bottlenecks</label>
+            <button id="launchFromLayoutBtn" disabled>Launch simulation on this layout →</button>
+          </div>
+          <canvas id="layoutCanvas" width="900" height="700"></canvas>
+          <div id="layoutMeta" class="meta-box"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-launch" class="tab-panel">
+      <h2>Launch a Simulation</h2>
+      <form id="launchForm">
+        <div class="form-row">
+          <label>Layout</label>
+          <select id="launchLayoutSelect"></select>
+        </div>
+        <div class="form-row">
+          <label>Preset</label>
+          <select id="launchPreset">
+            <option value="">(none — use custom fields below)</option>
+            <option value="sparse">sparse</option>
+            <option value="dense">dense</option>
+            <option value="bottleneck_stress">bottleneck_stress</option>
+            <option value="eta_corpus">eta_corpus</option>
+            <option value="conflict_corpus">conflict_corpus</option>
+            <option value="congestion_corpus">congestion_corpus</option>
+          </select>
+        </div>
+        <div class="form-row"><label>Robots (override)</label><input type="number" id="launchRobots" min="1" placeholder="preset default" /></div>
+        <div class="form-row"><label>Arrival rate /s (override)</label><input type="number" step="0.1" id="launchArrival" placeholder="preset default" /></div>
+        <div class="form-row"><label>Duration s (override)</label><input type="number" id="launchDuration" placeholder="preset default" /></div>
+        <div class="form-row"><label>dt (override)</label><input type="number" step="0.01" id="launchDt" placeholder="preset default" /></div>
+        <div class="form-row"><label>Seed</label><input type="number" id="launchSeed" value="0" /></div>
+        <button type="submit">Launch</button>
+      </form>
+      <div id="launchResult" class="meta-box"></div>
+    </section>
+
+    <section id="tab-create" class="tab-panel">
+      <div class="panel-split">
+        <div class="panel-list">
+          <h2>Create a Warehouse Layout</h2>
+          <form id="createLayoutForm">
+            <div class="form-row">
+              <label>Archetype</label>
+              <select id="createArchetype">
+                <option value="">(random)</option>
+                <option value="grid">grid</option>
+                <option value="flow_through">flow_through</option>
+                <option value="zone_based">zone_based</option>
+                <option value="u_flow">u_flow</option>
+                <option value="l_flow">l_flow</option>
+                <option value="central_corridor">central_corridor</option>
+                <option value="fishbone">fishbone</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Scale class</label>
+              <select id="createScale">
+                <option value="">(random)</option>
+                <option value="small">small</option>
+                <option value="medium">medium</option>
+                <option value="large">large</option>
+                <option value="very_large">very_large</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Industry type</label>
+              <select id="createIndustry">
+                <option value="">(random)</option>
+                <option value="ecommerce">ecommerce</option>
+                <option value="retail">retail</option>
+                <option value="grocery">grocery</option>
+                <option value="manufacturing">manufacturing</option>
+                <option value="automotive">automotive</option>
+                <option value="electronics">electronics</option>
+                <option value="cold_storage">cold_storage</option>
+                <option value="pharma">pharma</option>
+                <option value="parcel">parcel</option>
+                <option value="general_3pl">general_3pl</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Dock wall</label>
+              <select id="createDockWall">
+                <option value="">(random)</option>
+                <option value="south">south</option>
+                <option value="north">north</option>
+              </select>
+            </div>
+            <div class="form-row"><label>Irregularity (0-1)</label><input type="number" id="createIrregularity" min="0" max="1" step="0.05" placeholder="random" /></div>
+            <div class="form-row"><label>Seed</label><input type="number" id="createSeed" placeholder="random" /></div>
+            <button type="submit">Generate</button>
+          </form>
+          <div id="createResult" class="meta-box"></div>
+        </div>
+        <div class="panel-view">
+          <div class="view-toolbar">
+            <button id="createLaunchBtn" disabled>Launch simulation on this layout →</button>
+          </div>
+          <canvas id="createCanvas" width="900" height="700"></canvas>
+          <div id="createMeta" class="meta-box"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-watch" class="tab-panel">
+      <h2>Watch</h2>
+      <div class="view-toolbar">
+        <label>Run ID <input type="text" id="watchRunId" placeholder="paste a run_id or launch one" /></label>
+        <button id="watchLoadBtn">Watch / Replay</button>
+        <button id="watchReplayFromStartBtn" disabled>Replay from start</button>
+        <span id="watchStatus"></span>
+      </div>
+      <div class="canvas-stack">
+        <canvas id="watchBgCanvas" width="900" height="700"></canvas>
+        <canvas id="watchFgCanvas" width="900" height="700"></canvas>
+      </div>
+    </section>
+
+    <section id="tab-runs" class="tab-panel">
+      <h2>Run History</h2>
+      <div class="view-toolbar">
+        <button id="exportDatasetBtn" disabled>Export dataset from selected runs</button>
+        <span id="exportDatasetStatus"></span>
+      </div>
+      <table id="runsTable">
+        <thead>
+          <tr><th><input type="checkbox" id="runsSelectAll"></th><th>Run ID</th><th>Layout</th><th>Status</th><th>Seed</th><th>Started</th><th>Final tick</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div id="runDetail" class="meta-box"></div>
+    </section>
+
+    <section id="tab-report" class="tab-panel">
+      <div class="report-toolbar no-print">
+        <h2 style="margin:0;">Run Report</h2>
+        <label>Run ID <input type="text" id="reportRunId" placeholder="paste a run_id" /></label>
+        <button id="reportLoadBtn">Load Report</button>
+        <button id="reportPrintBtn">Print / Save as PDF</button>
+      </div>
+      <div id="reportBody"></div>
+    </section>
+
+    <section id="tab-datasets" class="tab-panel">
+      <div class="panel-split">
+        <div class="panel-list">
+          <h2>ML Datasets</h2>
+          <table id="datasetsTable">
+            <thead>
+              <tr><th>Model</th><th>Rows</th><th>Pos. rate</th><th>Runs</th><th>Created</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="panel-view">
+          <div id="datasetMeta" class="meta-box">Select a dataset on the left.</div>
+          <div class="view-toolbar">
+            <label>Split
+              <select id="datasetSplitFilter">
+                <option value="">all</option>
+                <option value="train">train</option>
+                <option value="val">val</option>
+                <option value="test">test</option>
+              </select>
+            </label>
+            <button id="datasetPrevBtn" disabled>&larr; Prev</button>
+            <span id="datasetPageInfo"></span>
+            <button id="datasetNextBtn" disabled>Next &rarr;</button>
+          </div>
+          <div class="wide-table-scroll">
+            <table id="datasetRowsTable">
+              <thead><tr></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/layoutRenderer.js"></script>
+  <script src="/js/layoutBrowser.js"></script>
+  <script src="/js/layoutCreate.js"></script>
+  <script src="/js/simView.js"></script>
+  <script src="/js/launchForm.js"></script>
+  <script src="/js/runHistory.js"></script>
+  <script src="/js/charts.js"></script>
+  <script src="/js/runReport.js"></script>
+  <script src="/js/datasetBrowser.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

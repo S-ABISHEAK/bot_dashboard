@@ -22,7 +22,16 @@ const S = {
   benchmark: false,
   armed: null,             // null | 'box' | 'zone'
   dragStart: null,
+
+  editMode: false,
+  editTool: "blocked",
+  editBuffer: null,
+  editPainting: false,
+  editHover: null,
 };
+
+const TOOL_FIELD = { blocked: "blocked", pickup: "pickups", dropoff: "dropoffs",
+                     charger: "chargers", depot: "depot" };
 
 const $ = (id) => document.getElementById(id);
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -125,7 +134,7 @@ class Arena {
     if (this.bannerEl) this.bannerEl.hidden = B.dashboard;
   }
 
-  _floor() {
+  _floor(rects = this.rackRects) {
     const { w, h } = this.layout, ctx = this.ctx;
     ctx.fillStyle = "#0a0f18";
     ctx.fillRect(0, 0, this.cv.width, this.cv.height);
@@ -136,7 +145,7 @@ class Arena {
     ctx.stroke();
     ctx.strokeStyle = "#2b3a52"; ctx.lineWidth = Math.max(2, this.CELL * 0.5);
     ctx.strokeRect(this.px(0.5), this.px(0.5), this.px(w - 1), this.px(h - 1));
-    for (const r of this.rackRects) {
+    for (const r of rects) {
       this._roundRect(this.px(r.x) + 1, this.px(r.y) + 1, this.px(r.w) - 2, this.px(r.h) - 2, 3);
       ctx.fillStyle = "#1a2434"; ctx.fill();
       ctx.fillStyle = "#222f43"; ctx.fillRect(this.px(r.x) + 1, this.px(r.y) + 1, this.px(r.w) - 2, 2);
@@ -158,8 +167,7 @@ class Arena {
     ctx.restore();
   }
 
-  _depot() {
-    const d = this.layout.depot;
+  _depot(d = this.layout.depot) {
     if (!d || !d.length) return;
     const ctx = this.ctx, C = this.CELL;
     const xs = d.map(p => p[0]), ys = d.map(p => p[1]);
@@ -186,7 +194,8 @@ class Arena {
     });
   }
 
-  _stations() {
+  _stations(pickups = this.layout.pickups, dropoffs = this.layout.dropoffs,
+            chargers = this.layout.chargers) {
     const ctx = this.ctx, C = this.CELL;
     const mark = (list, color) => {
       for (const [x, y] of list) {
@@ -195,9 +204,9 @@ class Arena {
         ctx.fillStyle = color + "22"; ctx.fill();
       }
     };
-    mark(this.layout.pickups, "#22c55e");
-    mark(this.layout.dropoffs, "#4f8cff");
-    for (const [x, y] of this.layout.chargers) {
+    mark(pickups, "#22c55e");
+    mark(dropoffs, "#4f8cff");
+    for (const [x, y] of chargers) {
       this._roundRect(this.px(x) + C * 0.12, this.px(y) + C * 0.12, C * 0.76, C * 0.76, 3);
       ctx.fillStyle = "#f59e0b"; ctx.fill();
       ctx.fillStyle = "#241a05"; ctx.font = `${C * 0.6}px Inter, system-ui, sans-serif`;
@@ -228,6 +237,36 @@ class Arena {
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText("!", this.px(x + 0.5), this.px(y + 0.55));
     }
+  }
+
+  /* ------------------------------------------------------------ editor */
+  drawEditorFrame(buf, hoverCell, hoverTool) {
+    if (!this.layout || !buf) return;
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, this.cv.width, this.cv.height);
+    this._floor([]);                       // grid + border only, no old racks
+    this._depot(buf.depot);
+    this._stations(buf.pickups, buf.dropoffs, buf.chargers);
+    this._editBlocked(buf.blocked);
+    if (hoverCell) this._paintCursor(hoverCell, hoverTool);
+  }
+
+  _editBlocked(cells) {
+    const ctx = this.ctx, C = this.CELL;
+    for (const [x, y] of cells) {
+      this._roundRect(this.px(x) + 1, this.px(y) + 1, C - 2, C - 2, 2);
+      ctx.fillStyle = "#28374c"; ctx.fill();
+      ctx.strokeStyle = "#3c4f6b"; ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+
+  _paintCursor([x, y], tool) {
+    const ctx = this.ctx, C = this.CELL;
+    const colors = { blocked: "#5b8cff", pickup: "#22c55e", dropoff: "#4f8cff",
+                     charger: "#f59e0b", depot: "#94a3b8", erase: "#ef4444" };
+    ctx.strokeStyle = colors[tool] || "#5b8cff";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(this.px(x) + 1, this.px(y) + 1, C - 2, C - 2);
   }
 
   _paths(f) {
@@ -380,7 +419,13 @@ function onStatus(msg) {
 /* ---------------------------------------------------------------- draw loop */
 function draw() {
   requestAnimationFrame(draw);
-  if (!S.layout || !arenaStack.cur) return;
+  if (!S.layout) return;
+
+  if (S.editMode) {
+    arenaStack.drawEditorFrame(S.editBuffer, S.editHover, S.editTool);
+    return;
+  }
+  if (!arenaStack.cur) return;
 
   if (S.view === "replay" && S.frames.length) {
     if (S.replayPlaying) {
@@ -603,10 +648,11 @@ function cellFromEvent(e) {
 }
 function bindArenaInput(cv) {
   cv.addEventListener("mousedown", (e) => {
-    if (!S.layout) return;
+    if (!S.layout || S.editMode) return;
     if (S.armed === "box" || S.armed === "zone") S.dragStart = cellFromEvent(e);
   });
   cv.addEventListener("mouseup", (e) => {
+    if (S.editMode) return;
     if (!S.dragStart || (S.armed !== "box" && S.armed !== "zone")) return;
     const [x0, y0] = S.dragStart, [x1, y1] = cellFromEvent(e);
     const x = Math.min(x0, x1), y = Math.min(y0, y1);
@@ -664,6 +710,178 @@ function onExport(m) {
   }
 }
 
+/* ---------------------------------------------------------------- layout editor */
+const cellKey = (x, y) => `${x},${y}`;
+
+function blankEditBuffer() {
+  return { blocked: [], pickups: [], dropoffs: [], chargers: [], depot: [], _owner: new Map() };
+}
+
+function layoutToBuffer(layout) {
+  const buf = blankEditBuffer();
+  if (!layout) return buf;
+  for (const field of ["blocked", "pickups", "dropoffs", "chargers", "depot"]) {
+    for (const [x, y] of (layout[field] || [])) {
+      buf[field].push([x, y]);
+      buf._owner.set(cellKey(x, y), field);
+    }
+  }
+  return buf;
+}
+
+function bufferToLayout(buf) {
+  return {
+    schema: "fleetnet.custom_layout.v1",
+    blocked: buf.blocked, pickups: buf.pickups, dropoffs: buf.dropoffs,
+    chargers: buf.chargers, depot: buf.depot,
+  };
+}
+
+function removeFromField(arr, x, y) {
+  const i = arr.findIndex(([cx, cy]) => cx === x && cy === y);
+  if (i >= 0) arr.splice(i, 1);
+}
+
+function bufferSet(buf, x, y, field) {
+  const k = cellKey(x, y);
+  const prev = buf._owner.get(k);
+  if (prev === field) return;
+  if (prev) removeFromField(buf[prev], x, y);
+  if (field) { buf[field].push([x, y]); buf._owner.set(k, field); }
+  else buf._owner.delete(k);
+}
+
+function paintAt(x, y) {
+  const buf = S.editBuffer;
+  if (!buf || !S.layout) return;
+  if (x <= 0 || y <= 0 || x >= S.layout.w - 1 || y >= S.layout.h - 1) return;   // border is always a wall
+  const tool = S.editTool;
+  if (tool === "erase") {
+    bufferSet(buf, x, y, null);
+  } else if (tool === "blocked") {
+    bufferSet(buf, x, y, "blocked");
+  } else {
+    const field = TOOL_FIELD[tool];
+    const k = cellKey(x, y);
+    bufferSet(buf, x, y, buf._owner.get(k) === field ? null : field);   // click-toggle
+  }
+  updatePaletteCounts();
+}
+
+function updatePaletteCounts() {
+  const b = S.editBuffer;
+  if (!b) return;
+  $("paletteCounts").textContent =
+    `Racks ${b.blocked.length} · Pickups ${b.pickups.length} · Dropoffs ${b.dropoffs.length} `
+    + `· Chargers ${b.chargers.length} · Depot ${b.depot.length}`;
+}
+
+function renderLayoutErrors(errors) {
+  $("layoutErrorsPanel").hidden = false;
+  const ul = $("layoutErrors");
+  if (!errors.length) {
+    $("layoutStatusHint").textContent = "valid";
+    ul.innerHTML = '<li><span class="m" style="color:var(--ok)">✓ layout is valid — ready to Apply</span></li>';
+  } else {
+    $("layoutStatusHint").textContent = `${errors.length} issue(s)`;
+    ul.innerHTML = errors.map(e => `<li><span class="m" style="color:var(--err)">${e}</span></li>`).join("");
+  }
+}
+
+function clearLayoutErrors() {
+  $("layoutErrorsPanel").hidden = true;
+  $("layoutErrors").innerHTML = "";
+}
+
+async function enterEditMode() {
+  let current = null;
+  try {
+    const r = await fetch("/api/layout").then(r => r.json());
+    current = r.custom_layout;
+  } catch { /* fall through to a blank buffer */ }
+  S.editBuffer = layoutToBuffer(current);
+  S.editMode = true;
+  S.editPainting = false;
+  S.editHover = null;
+  if (S.running) post("/api/control", { action: "pause" });
+  $("btnEditLayout").classList.add("armed");
+  $("btnEditLayout").textContent = "Exit Editor";
+  $("layoutPalette").hidden = false;
+  $("arenaTitleStack").textContent = "Layout Editor — paint racks & stations";
+  clearLayoutErrors();
+  updatePaletteCounts();
+}
+
+function exitEditMode() {
+  S.editMode = false;
+  S.editBuffer = null;
+  S.editPainting = false;
+  S.editHover = null;
+  $("btnEditLayout").classList.remove("armed");
+  $("btnEditLayout").textContent = "Edit Layout";
+  $("layoutPalette").hidden = true;
+  clearLayoutErrors();
+  $("arenaTitleStack").textContent = S.benchmark
+    ? "Fleet Map — 5-Layer Stack" : "Fleet Map — Warehouse Layout";
+}
+
+$("btnEditLayout").onclick = () => { S.editMode ? exitEditMode() : enterEditMode(); };
+
+$("btnResetLayout").onclick = async () => {
+  if (!confirm("Reset to the default warehouse layout? This discards any custom layout.")) return;
+  await post("/api/layout/clear");
+  if (S.editMode) exitEditMode();
+};
+
+$("paletteSeg").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.editTool = b.dataset.tool;
+  [...$("paletteSeg").children].forEach(x => x.classList.toggle("on", x === b));
+});
+
+$("btnLayoutValidate").onclick = async () => {
+  const res = await post("/api/layout/validate", bufferToLayout(S.editBuffer)).then(r => r.json());
+  renderLayoutErrors(res.errors);
+};
+
+$("btnLayoutApply").onclick = async () => {
+  const res = await post("/api/layout", {
+    layout: bufferToLayout(S.editBuffer),
+    n_robots: +$("cfgRobots").value, n_tasks: +$("cfgTasks").value, seed: +$("cfgSeed").value,
+  }).then(r => r.json());
+  if (res.ok) exitEditMode();
+  else renderLayoutErrors(res.errors);
+};
+
+$("btnLayoutClearCanvas").onclick = () => {
+  if (!confirm("Clear the entire canvas?")) return;
+  S.editBuffer = blankEditBuffer();
+  clearLayoutErrors();
+  updatePaletteCounts();
+};
+
+$("btnLayoutCancel").onclick = () => {
+  if (!confirm("Discard changes and exit the editor?")) return;
+  exitEditMode();
+};
+
+function bindEditInput(cv) {
+  cv.addEventListener("mousedown", (e) => {
+    if (!S.editMode) return;
+    const [x, y] = cellFromEvent(e);
+    S.editPainting = true;
+    paintAt(x, y);
+  });
+  cv.addEventListener("mousemove", (e) => {
+    if (!S.editMode) return;
+    const [x, y] = cellFromEvent(e);
+    S.editHover = [x, y];
+    if (S.editPainting && (S.editTool === "blocked" || S.editTool === "erase")) paintAt(x, y);
+  });
+  cv.addEventListener("mouseleave", () => { S.editHover = null; });
+  window.addEventListener("mouseup", () => { S.editPainting = false; });
+}
+
 /* clock */
 setInterval(() => {
   $("clock").textContent = new Date().toLocaleTimeString([], { hour12: false });
@@ -672,5 +890,6 @@ setInterval(() => {
 /* ---------------------------------------------------------------- boot */
 arenaStack = new Arena("mapStack", "mapBannerStack");
 bindArenaInput(arenaStack.cv);
+bindEditInput(arenaStack.cv);
 connect();
 requestAnimationFrame(draw);

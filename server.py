@@ -16,7 +16,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from engine import config as C, render
+from engine import config as C, render, layout as L
 from engine.simulation import Simulation
 
 STATIC = Path(__file__).parent / "static"
@@ -30,11 +30,13 @@ def _clamp(v, lo, hi, default):
         return default
 
 
-def _mk_sims(n_robots, n_tasks, seed):
+def _mk_sims(n_robots, n_tasks, seed, custom_layout=None):
     return {
-        "stack": Simulation(n_robots=n_robots, n_tasks=n_tasks, seed=seed),
+        "stack": Simulation(n_robots=n_robots, n_tasks=n_tasks, seed=seed,
+                            custom_layout=custom_layout),
         "stopwait": Simulation(n_robots=n_robots, n_tasks=n_tasks, seed=seed,
-                               coordination="stopwait"),
+                               coordination="stopwait",
+                               custom_layout=custom_layout),
     }
 
 
@@ -46,6 +48,7 @@ class Session:
     compared against the stop-and-wait baseline."""
 
     def __init__(self):
+        self.custom_layout = None
         self.sims = _mk_sims(4, 10, 7)
         self.benchmark = False
         self.running = False
@@ -176,7 +179,7 @@ class Session:
     # -- actions ------------------------------------------------------
     async def reconfigure(self, n_robots, n_tasks, seed):
         async with self.lock:
-            self.sims = _mk_sims(n_robots, n_tasks, seed)
+            self.sims = _mk_sims(n_robots, n_tasks, seed, self.custom_layout)
             self.running = False
             self._settle = 0
         await self.broadcast(self.layout_msg())
@@ -184,6 +187,15 @@ class Session:
 
     async def reset(self):
         cfg = self.sim.cfg()
+        await self.reconfigure(cfg["n_robots"], cfg["n_tasks"], cfg["seed"])
+
+    async def apply_custom_layout(self, custom_layout, n_robots, n_tasks, seed):
+        self.custom_layout = custom_layout
+        await self.reconfigure(n_robots, n_tasks, seed)
+
+    async def clear_custom_layout(self):
+        cfg = self.sim.cfg()
+        self.custom_layout = None
         await self.reconfigure(cfg["n_robots"], cfg["n_tasks"], cfg["seed"])
 
     async def export(self):
@@ -267,6 +279,38 @@ async def api_config(payload: dict):
         _clamp(payload.get("n_tasks"), 1, C.MAX_TASKS, 10),
         _clamp(payload.get("seed"), 0, 10_000, 7),
     )
+    return {"ok": True, "config": session.sim.cfg()}
+
+
+@app.get("/api/layout")
+async def api_layout_get():
+    return {"custom_layout": session.custom_layout}
+
+
+@app.post("/api/layout/validate")
+async def api_layout_validate(payload: dict):
+    errors = L.validate(payload)
+    return {"ok": not errors, "errors": errors}
+
+
+@app.post("/api/layout")
+async def api_layout_apply(payload: dict):
+    custom_layout = payload.get("layout")
+    errors = L.validate(custom_layout)
+    if errors:
+        return {"ok": False, "errors": errors}
+    await session.apply_custom_layout(
+        custom_layout,
+        _clamp(payload.get("n_robots"), 1, C.MAX_ROBOTS, session.sim.cfg()["n_robots"]),
+        _clamp(payload.get("n_tasks"), 1, C.MAX_TASKS, session.sim.cfg()["n_tasks"]),
+        _clamp(payload.get("seed"), 0, 10_000, session.sim.cfg()["seed"]),
+    )
+    return {"ok": True, "config": session.sim.cfg()}
+
+
+@app.post("/api/layout/clear")
+async def api_layout_clear():
+    await session.clear_custom_layout()
     return {"ok": True, "config": session.sim.cfg()}
 
 

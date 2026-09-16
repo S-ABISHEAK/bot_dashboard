@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FleetNet — Decentralised AMR Control</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- ───────────────── top bar ───────────────── -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="26" height="26">
+          <circle cx="16" cy="7" r="3.4"/><circle cx="7" cy="23" r="3.4"/>
+          <circle cx="25" cy="23" r="3.4"/>
+          <path d="M16 10 L7 20 M16 10 L25 20 M9.5 23 L22.5 23" stroke-width="1.7"/>
+        </svg>
+      </div>
+      <div>
+        <h1>FleetNet <span>Dashboard</span></h1>
+        <p>Decentralised Multi-AMR Navigation — D* Lite · MAPF/MD-PIBT · RVO/ORCA · ACBBA · Mesh</p>
+      </div>
+    </div>
+
+    <div class="kpi-strip" id="kpiStrip">
+      <div class="kpi"><span class="kpi-label">Robots</span><span class="kpi-val" id="kpiRobots">–</span></div>
+      <div class="kpi"><span class="kpi-label">Active Tasks</span><span class="kpi-val" id="kpiActive">–</span></div>
+      <div class="kpi"><span class="kpi-label">Completed</span><span class="kpi-val" id="kpiDone">–</span></div>
+      <div class="kpi"><span class="kpi-label">Avg Time</span><span class="kpi-val" id="kpiAvg">–</span></div>
+      <div class="kpi"><span class="kpi-label">Conflicts</span><span class="kpi-val" id="kpiConf">–</span></div>
+      <div class="kpi"><span class="kpi-label">Collisions Avoided</span><span class="kpi-val" id="kpiAvoid">–</span></div>
+    </div>
+
+    <div class="clock">
+      <div class="conn" id="conn"><i></i><span>connecting…</span></div>
+      <time id="clock">--:--:--</time>
+      <span class="simtime" id="simTime">t = 0.0 s</span>
+    </div>
+  </header>
+
+  <!-- ───────────────── toolbar ───────────────── -->
+  <div class="toolbar">
+    <div class="tgroup">
+      <span class="tgroup-label">Configure</span>
+      <label>Robots <input type="number" id="cfgRobots" min="1" max="6" value="4"></label>
+      <label>Tasks <input type="number" id="cfgTasks" min="1" max="20" value="10"></label>
+      <label>Seed <input type="number" id="cfgSeed" min="0" max="9999" value="7"></label>
+      <button class="btn" id="btnApply">Apply &amp; Reset</button>
+    </div>
+
+    <div class="tgroup">
+      <span class="tgroup-label">Run</span>
+      <button class="btn btn-primary" id="btnStart">Start</button>
+      <button class="btn" id="btnStep">Step</button>
+      <button class="btn" id="btnReset">Reset</button>
+      <div class="seg" id="speedSeg">
+        <button data-v="0.5">0.5×</button>
+        <button data-v="1" class="on">1×</button>
+        <button data-v="2">2×</button>
+        <button data-v="4">4×</button>
+      </div>
+    </div>
+
+    <div class="tgroup">
+      <span class="tgroup-label">Inject</span>
+      <button class="btn btn-arm" id="btnBox">Drop Box</button>
+      <button class="btn" id="btnClearBoxes">Clear Boxes</button>
+      <button class="btn btn-arm" id="btnZone">Dead Zone</button>
+      <button class="btn" id="btnClearZones">Clear Zones</button>
+      <span class="pipe"></span>
+      <select id="failSel" class="sel"></select>
+      <button class="btn" id="btnFail">Fail</button>
+      <button class="btn" id="btnRecover">Recover</button>
+      <span class="pipe"></span>
+      <button class="btn btn-danger" id="btnKill">Kill Dashboard</button>
+    </div>
+
+    <div class="tgroup">
+      <span class="tgroup-label">Benchmark</span>
+      <label class="chk"><input type="checkbox" id="benchToggle"> A/B vs stop-and-wait</label>
+      <span class="hint">restarts the scenario</span>
+    </div>
+
+    <div class="tgroup">
+      <span class="tgroup-label">Video</span>
+      <button class="btn" id="btnExport">Export MP4</button>
+    </div>
+  </div>
+
+  <!-- ───────────────── content ───────────────── -->
+  <div class="content" id="content">
+
+    <div class="col col-left">
+      <section class="panel">
+        <div class="panel-hd"><h2>Robot Status</h2><span class="hint" id="fleetHint"></span></div>
+        <div class="robot-grid" id="robotGrid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-hd"><h2>Task Board</h2>
+          <span class="hint" id="taskHint"></span>
+        </div>
+        <div class="table-wrap">
+          <table class="tasktable">
+            <thead><tr><th>ID</th><th>Status</th><th>Robot</th><th>ETA</th><th>Route</th></tr></thead>
+            <tbody id="taskBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-hd"><h2>Event Log</h2></div>
+        <ul class="eventlog" id="eventLog"></ul>
+      </section>
+    </div>
+
+    <div class="col col-right">
+      <div id="arenaWrap">
+        <section class="panel panel-map">
+          <div class="panel-hd">
+            <h2 id="arenaTitleStack">Fleet Map — Warehouse Layout</h2>
+            <label class="chk"><input type="checkbox" id="heatToggle"> Congestion</label>
+          </div>
+          <div class="map-shell">
+            <canvas id="mapStack"></canvas>
+            <div class="map-banner" id="mapBannerStack" hidden>DASHBOARD OFFLINE · fleet autonomous</div>
+            <div class="arm-hint" id="armHint" hidden></div>
+          </div>
+          <div class="legend">
+            <span><i class="dot" style="background:#22c55e"></i>Active</span>
+            <span><i class="dot" style="background:#f59e0b"></i>Waiting</span>
+            <span><i class="dot" style="background:#fb923c"></i>Re-routing</span>
+            <span><i class="dot" style="background:#ef4444"></i>Charging</span>
+            <span><i class="dot" style="background:#a855f7"></i>Comms-lost</span>
+            <span><i class="dot" style="background:#f43f5e"></i>Stranded</span>
+            <span><i class="dot" style="background:#64748b"></i>Idle</span>
+            <span><i class="dot" style="background:#8b95a5"></i>Parked</span>
+            <span><i class="sq" style="border-color:#22c55e"></i>Pickup</span>
+            <span><i class="sq" style="border-color:#4f8cff"></i>Drop-off</span>
+            <span><i class="sq" style="background:#f59e0b;border-color:#f59e0b"></i>Charger</span>
+            <span><i class="sq" style="border-color:#94a3b8"></i>Depot</span>
+          </div>
+        </section>
+
+        <section class="panel panel-map bench-only" id="arenaPanelStopwait" hidden>
+          <div class="panel-hd">
+            <h2>Baseline — Stop-and-Wait + recovery <span class="hint">timeout priority · reactive detour</span></h2>
+          </div>
+          <div class="map-shell">
+            <canvas id="mapStopwait"></canvas>
+            <div class="map-banner" id="mapBannerStopwait" hidden>DASHBOARD OFFLINE · fleet autonomous</div>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel bench-only" id="scoreboardPanel" hidden>
+        <div class="panel-hd"><h2>Comparison Scoreboard</h2><span class="hint" id="verdictHint"></span></div>
+        <div class="summary scoreboard" id="scoreboard"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-hd"><h2>Algorithm Activity</h2><span class="hint">live per-tick — proves the layers are computing</span></div>
+        <div class="activity" id="activity"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-hd"><h2>Replay &amp; Video</h2><span class="hint" id="replayHint">buffering…</span></div>
+        <div class="replay">
+          <div class="replay-row">
+            <button class="btn" id="btnReplayPlay">Play</button>
+            <input type="range" id="scrub" min="0" max="0" value="0" />
+            <button class="btn" id="btnLive">● LIVE</button>
+          </div>
+          <div class="export-row" id="exportRow" hidden>
+            <div class="bar"><i id="exportBar"></i></div>
+            <span id="exportLabel"></span>
+          </div>
+          <video id="video" controls hidden></video>
+          <a id="videoDl" class="hint dl" href="#" hidden download>Download fleet_demo.mp4</a>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ───────────────── footer ───────────────── -->
+  <footer class="footer">
+    <section class="panel">
+      <div class="panel-hd"><h2>Fleet Summary</h2><span class="hint">rolling metrics — the baseline-comparison data source</span></div>
+      <div class="summary" id="summary"></div>
+    </section>
+  </footer>
+
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

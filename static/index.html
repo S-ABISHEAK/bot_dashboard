@@ -125,7 +125,13 @@
   </section>
 
   <section class="panel" id="savedLayoutsPanel">
-    <div class="panel-hd"><h2>Saved Layouts</h2><span class="hint" id="savedLayoutsHint"></span></div>
+    <div class="panel-hd">
+      <h2>Saved Layouts</h2>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="hint" id="savedLayoutsHint"></span>
+        <button class="btn" id="btnSaveCurrentLayout">Save Current Layout As…</button>
+      </div>
+    </div>
     <div class="tgroup" id="saveAsRow" hidden>
       <span class="tgroup-label">Save current</span>
       <input type="text" id="saveAsName" placeholder="Layout name…" maxlength="60">

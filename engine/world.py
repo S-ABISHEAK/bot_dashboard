@@ -78,3 +78,18 @@ class World:
         sent to the browser once so the map background can be drawn."""
         ys, xs = np.where(self.grid)
         return [[int(x), int(y)] for x, y in zip(xs, ys)]
+
+    def as_custom_layout(self):
+        """This world's current geometry as an editable custom_layout dict
+        (the shape engine/layout.py validates and the editor paints).  Border
+        walls are excluded -- the editor and validator always re-add them."""
+        blocked = [[x, y] for (x, y) in self.static_obstacle_cells()
+                  if not (x in (0, self.w - 1) or y in (0, self.h - 1))]
+        return {
+            "schema": "fleetnet.custom_layout.v1",
+            "blocked": blocked,
+            "pickups": [list(p) for p in self.pickups],
+            "dropoffs": [list(p) for p in self.dropoffs],
+            "chargers": [list(p) for p in self.chargers],
+            "depot": [list(p) for p in self.depot],
+        }

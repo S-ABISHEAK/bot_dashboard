@@ -124,6 +124,21 @@
     <ul class="eventlog" id="layoutErrors"></ul>
   </section>
 
+  <section class="panel" id="savedLayoutsPanel">
+    <div class="panel-hd"><h2>Saved Layouts</h2><span class="hint" id="savedLayoutsHint"></span></div>
+    <div class="tgroup" id="saveAsRow" hidden>
+      <span class="tgroup-label">Save current</span>
+      <input type="text" id="saveAsName" placeholder="Layout name…" maxlength="60">
+      <button class="btn btn-primary" id="btnSaveAsLayout">Save As…</button>
+    </div>
+    <div class="table-wrap">
+      <table class="tasktable">
+        <thead><tr><th>Name</th><th>Updated</th><th>Actions</th></tr></thead>
+        <tbody id="savedLayoutsBody"></tbody>
+      </table>
+    </div>
+  </section>
+
   <!-- ───────────────── content ───────────────── -->
   <div class="content" id="content">
 

@@ -28,6 +28,7 @@ const S = {
   editBuffer: null,
   editPainting: false,
   editHover: null,
+  savedLayouts: [],
 };
 
 const TOOL_FIELD = { blocked: "blocked", pickup: "pickups", dropoff: "dropoffs",
@@ -793,13 +794,18 @@ function clearLayoutErrors() {
   $("layoutErrors").innerHTML = "";
 }
 
+function seedEditBuffer(layoutOrNull) {
+  S.editBuffer = layoutToBuffer(layoutOrNull);
+  updatePaletteCounts();
+}
+
 async function enterEditMode() {
   let current = null;
   try {
     const r = await fetch("/api/layout").then(r => r.json());
     current = r.custom_layout;
   } catch { /* fall through to a blank buffer */ }
-  S.editBuffer = layoutToBuffer(current);
+  seedEditBuffer(current);
   S.editMode = true;
   S.editPainting = false;
   S.editHover = null;
@@ -807,9 +813,10 @@ async function enterEditMode() {
   $("btnEditLayout").classList.add("armed");
   $("btnEditLayout").textContent = "Exit Editor";
   $("layoutPalette").hidden = false;
+  $("saveAsRow").hidden = false;
   $("arenaTitleStack").textContent = "Layout Editor — paint racks & stations";
   clearLayoutErrors();
-  updatePaletteCounts();
+  fetchAndRenderSavedLayouts();
 }
 
 function exitEditMode() {
@@ -820,6 +827,7 @@ function exitEditMode() {
   $("btnEditLayout").classList.remove("armed");
   $("btnEditLayout").textContent = "Edit Layout";
   $("layoutPalette").hidden = true;
+  $("saveAsRow").hidden = true;
   clearLayoutErrors();
   $("arenaTitleStack").textContent = S.benchmark
     ? "Fleet Map — 5-Layer Stack" : "Fleet Map — Warehouse Layout";
@@ -865,6 +873,100 @@ $("btnLayoutCancel").onclick = () => {
   exitEditMode();
 };
 
+/* ---------------------------------------------------------------- saved layouts */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+function fmtUpdated(iso) {
+  return (iso || "").replace("T", " ").replace("Z", "").slice(0, 16);
+}
+
+function renderSavedLayouts(list) {
+  S.savedLayouts = list;
+  const tb = $("savedLayoutsBody");
+  tb.innerHTML = "";
+  for (const r of list) {
+    const n = escapeHtml(r.name);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${n}</td>
+      <td>${fmtUpdated(r.updated_at)}</td>
+      <td>
+        <button class="btn" data-act="load" data-id="${r.id}" data-name="${n}">Load</button>
+        <button class="btn btn-primary" data-act="apply" data-id="${r.id}" data-name="${n}">Apply</button>
+        <button class="btn" data-act="rename" data-id="${r.id}" data-name="${n}">Rename</button>
+        <button class="btn btn-danger" data-act="delete" data-id="${r.id}" data-name="${n}">Delete</button>
+      </td>`;
+    tb.appendChild(tr);
+  }
+  $("savedLayoutsHint").textContent = `${list.length} saved`;
+}
+
+async function fetchAndRenderSavedLayouts() {
+  try {
+    const res = await fetch("/api/layouts").then(r => r.json());
+    renderSavedLayouts(res.layouts || []);
+  } catch { /* leave the list as-is on a transient fetch failure */ }
+}
+
+async function loadSavedLayoutIntoEditor(id, name) {
+  if (S.editMode && !confirm(`Discard current unsaved edits and load "${name}"?`)) return;
+  const res = await fetch(`/api/layouts/${id}`).then(r => r.json());
+  if (!res.ok) { alert(res.error || "failed to load layout"); return; }
+  if (!S.editMode) await enterEditMode();
+  seedEditBuffer(res.layout.layout);
+  clearLayoutErrors();
+}
+
+async function applySavedLayout(id) {
+  const res = await post(`/api/layouts/${id}/apply`, {
+    n_robots: +$("cfgRobots").value, n_tasks: +$("cfgTasks").value, seed: +$("cfgSeed").value,
+  }).then(r => r.json());
+  if (!res.ok) alert((res.errors || [res.error]).join("\n"));
+}
+
+async function renameSavedLayout(id, currentName) {
+  const name = prompt("Rename layout:", currentName);
+  if (name == null) return;
+  const trimmed = name.trim();
+  if (!trimmed || trimmed === currentName) return;
+  const res = await post(`/api/layouts/${id}/rename`, { name: trimmed }).then(r => r.json());
+  if (res.ok) fetchAndRenderSavedLayouts();
+  else alert(res.errors.join("\n"));
+}
+
+async function deleteSavedLayout(id, name) {
+  if (!confirm(`Delete saved layout "${name}"? This cannot be undone.`)) return;
+  const res = await fetch(`/api/layouts/${id}`, { method: "DELETE" }).then(r => r.json());
+  if (res.ok) fetchAndRenderSavedLayouts();
+  else alert(res.error || "delete failed");
+}
+
+$("savedLayoutsBody").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  const { act, id, name } = b.dataset;
+  if (act === "load") loadSavedLayoutIntoEditor(id, name);
+  else if (act === "apply") applySavedLayout(id);
+  else if (act === "rename") renameSavedLayout(id, name);
+  else if (act === "delete") deleteSavedLayout(id, name);
+});
+
+$("btnSaveAsLayout").onclick = async () => {
+  const name = $("saveAsName").value.trim();
+  if (!name) { renderLayoutErrors(["a name is required"]); return; }
+  const res = await post("/api/layouts", { name, layout: bufferToLayout(S.editBuffer) }).then(r => r.json());
+  if (res.ok) {
+    $("saveAsName").value = "";
+    clearLayoutErrors();
+    fetchAndRenderSavedLayouts();
+  } else {
+    renderLayoutErrors(res.errors);
+  }
+};
+
 function bindEditInput(cv) {
   cv.addEventListener("mousedown", (e) => {
     if (!S.editMode) return;
@@ -892,4 +994,5 @@ arenaStack = new Arena("mapStack", "mapBannerStack");
 bindArenaInput(arenaStack.cv);
 bindEditInput(arenaStack.cv);
 connect();
+fetchAndRenderSavedLayouts();
 requestAnimationFrame(draw);

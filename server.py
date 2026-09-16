@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from engine import config as C, render, layout as L
+from engine.layout_store import LayoutStore
 from engine.simulation import Simulation
 
 STATIC = Path(__file__).parent / "static"
@@ -49,6 +50,7 @@ class Session:
 
     def __init__(self):
         self.custom_layout = None
+        self.layout_store = LayoutStore()
         self.sims = _mk_sims(4, 10, 7)
         self.benchmark = False
         self.running = False
@@ -312,6 +314,61 @@ async def api_layout_apply(payload: dict):
 async def api_layout_clear():
     await session.clear_custom_layout()
     return {"ok": True, "config": session.sim.cfg()}
+
+
+@app.get("/api/layouts")
+async def api_layouts_list():
+    return {"layouts": session.layout_store.list()}
+
+
+@app.get("/api/layouts/{layout_id}")
+async def api_layouts_get(layout_id: str):
+    rec = session.layout_store.get(layout_id)
+    if rec is None:
+        return {"ok": False, "error": "not found"}
+    return {"ok": True, "layout": rec}
+
+
+@app.post("/api/layouts")
+async def api_layouts_save(payload: dict):
+    layout = payload.get("layout")
+    errors = L.validate(layout)
+    if errors:
+        return {"ok": False, "errors": errors}
+    result = session.layout_store.save_as(payload.get("name"), layout)
+    if isinstance(result, list):
+        return {"ok": False, "errors": result}
+    return {"ok": True, "layout": result}
+
+
+@app.post("/api/layouts/{layout_id}/apply")
+async def api_layouts_apply(layout_id: str, payload: dict = None):
+    payload = payload or {}
+    rec = session.layout_store.get(layout_id)
+    if rec is None:
+        return {"ok": False, "error": "not found"}
+    cfg = session.sim.cfg()
+    await session.apply_custom_layout(
+        rec["layout"],
+        _clamp(payload.get("n_robots"), 1, C.MAX_ROBOTS, cfg["n_robots"]),
+        _clamp(payload.get("n_tasks"), 1, C.MAX_TASKS, cfg["n_tasks"]),
+        _clamp(payload.get("seed"), 0, 10_000, cfg["seed"]),
+    )
+    return {"ok": True, "config": session.sim.cfg()}
+
+
+@app.post("/api/layouts/{layout_id}/rename")
+async def api_layouts_rename(layout_id: str, payload: dict):
+    result = session.layout_store.rename(layout_id, payload.get("name"))
+    if isinstance(result, list):
+        return {"ok": False, "errors": result}
+    return {"ok": True, "layout": result}
+
+
+@app.delete("/api/layouts/{layout_id}")
+async def api_layouts_delete(layout_id: str):
+    ok = session.layout_store.delete(layout_id)
+    return {"ok": ok} if ok else {"ok": False, "error": "not found"}
 
 
 @app.post("/api/control")

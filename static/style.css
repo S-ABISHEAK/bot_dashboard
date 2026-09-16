@@ -112,6 +112,7 @@ svg{fill:currentColor;stroke:currentColor}
   padding:10px 12px;
   box-shadow:var(--shadow);
 }
+.tgroup[hidden]{display:none}
 .tgroup{
   display:flex;align-items:center;gap:7px;
   padding:5px 10px 5px 12px;

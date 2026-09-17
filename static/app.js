@@ -471,10 +471,9 @@ function renderPanels(f) {
   $("simTime").textContent = `t = ${f.sim_time_s.toFixed(1)} s`;
 
   renderRobots(f);
-  renderTasks(f);
+  renderFleetLog(f);
   renderActivity(f);
   renderSummary(f);
-  renderEvents(f);
   populateSelects(f);
 }
 
@@ -507,27 +506,54 @@ function renderRobots(f) {
   $("fleetHint").textContent = `${f.robots.length} AMRs · priority ${f.activity.priority_order.map(n => n.split("-")[1]).join(" › ")}`;
 }
 
-function renderTasks(f) {
-  const order = { active: 0, blocked: 1, queued: 2, done: 3 };
-  const rows = [...f.tasks].sort((a, b) => order[a.status] - order[b.status] || a.id - b.id);
-  const tb = $("taskBody");
-  tb.innerHTML = "";
-  for (const t of rows) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>#${t.id}</td>
-      <td><span class="tstatus ${t.status}">${t.status}</span></td>
-      <td>${t.assignee_name ? t.assignee_name.split("-")[1] : "—"}</td>
-      <td>${t.status === "active" ? fmtEta(t.eta_s) : "—"}</td>
-      <td>${t.rerouted ? '<span class="reroute-tag">RE-ROUTED</span>' : "—"}</td>`;
-    tb.appendChild(tr);
+const INTENT_BY_MODE = {
+  active: "deliver", waiting: "hold position", rerouting: "re-routing",
+  charging: "return to charge", idle: "await task", parked: "standby",
+  "comms-lost": "local avoidance only", stranded: "hold — no route", error: "offline",
+};
+const FLOG_NOTES = {
+  stranded: "⚠ SAFE-HOLD — no route to goal",
+  "comms-lost": "⚠ Wi-Fi dead zone — local sensing only",
+  error: "⚠ FAULT — awaiting recovery",
+  rerouting: "⚠ re-routing around a new obstacle",
+};
+
+function renderFleetLog(f) {
+  const body = $("fleetLogBody");
+  body.innerHTML = "";
+  for (const rb of f.robots) {
+    const cls = "s-" + rb.mode;
+    const dest = rb.path && rb.path.length
+      ? `(${rb.path[rb.path.length - 1].join(", ")})` : "—";
+    const intent = INTENT_BY_MODE[rb.mode] || rb.mode;
+    const note = FLOG_NOTES[rb.mode];
+    const taskCol = rb.task_id != null ? `#${rb.task_id} · ${rb.task_label}` : rb.task_label;
+    const el = document.createElement("div");
+    el.className = `flog-entry st ${cls}`;
+    el.innerHTML = `
+      <div class="flog-hd">
+        <span class="name">${rb.name}<span class="badge st ${cls}">${rb.mode}</span></span>
+        <span class="prio">P${rb.priority}</span>
+      </div>
+      <div class="flog-rows">
+        <span class="k">POS</span><span class="v">(${rb.pos[0].toFixed(1)}, ${rb.pos[1].toFixed(1)})</span>
+        <span class="k">LOC</span><span class="v">${rb.aisle} · ${rb.bay}</span>
+        <span class="k">SPEED</span><span class="v">${rb.speed_mps.toFixed(2)} m/s</span>
+        <span class="k">BATTERY</span><span class="v">${rb.battery.toFixed(0)}%</span>
+        <span class="k">LINK</span><span class="v">${rb.connected ? "online" : "LOST"}</span>
+        <span class="k">HEARTBEAT</span><span class="v">${rb.heartbeat_s.toFixed(1)}s ago</span>
+        <span class="k">TASK</span><span class="v">${taskCol}</span>
+        <span class="k">ETA</span><span class="v">${fmtEta(rb.eta_s)}</span>
+        <span class="k">DEST</span><span class="v">${dest}</span>
+        <span class="k">INTENT</span><span class="v">${intent}</span>
+      </div>
+      ${note ? `<div class="flog-note">${note}</div>` : ""}`;
+    body.appendChild(el);
   }
-  const q = f.tasks.filter(t => t.status === "queued").length;
-  const a = f.tasks.filter(t => t.status === "active").length;
-  const d = f.tasks.filter(t => t.status === "done").length;
-  const b = f.tasks.filter(t => t.status === "blocked").length;
-  $("taskHint").textContent =
-    `${q} queued · ${a} active · ${d} done` + (b ? ` · ${b} blocked` : "");
+  const k = f.kpi;
+  $("fleetLogHint").textContent =
+    `${k.queued_tasks} queued · ${k.active_tasks} active · ${k.completed}/${k.total} done`
+    + (k.blocked_tasks ? ` · ${k.blocked_tasks} blocked` : "");
 }
 
 function renderActivity(f) {
@@ -552,16 +578,6 @@ function renderSummary(f) {
     item("Charging", c.charging) + item("Re-routing", c.rerouting) +
     item("Waiting", c.waiting) + item("Stranded", c.stranded) +
     item("Faulted", c.error);
-}
-
-function renderEvents(f) {
-  const ul = $("eventLog");
-  ul.innerHTML = "";
-  for (const e of [...f.events].reverse()) {
-    const li = document.createElement("li");
-    li.innerHTML = `<span class="t">t${e.t.toFixed(0)}</span><span class="m">${e.msg}</span>`;
-    ul.appendChild(li);
-  }
 }
 
 let _selSig = "";

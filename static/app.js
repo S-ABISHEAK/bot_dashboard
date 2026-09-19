@@ -652,12 +652,12 @@ function renderSummary(f) {
 let _selSig = "";
 function populateSelects(f) {
   const sig = f.robots.map(r => r.id + (r.alive ? "1" : "0")).join(",");
-  if (sig === _selSig || document.activeElement === $("failSel")) return;
+  if (sig === _selSig || document.activeElement === $("qaFailSel")) return;
   _selSig = sig;
-  const cur = $("failSel").value;
-  $("failSel").innerHTML = f.robots.map(r =>
+  const cur = $("qaFailSel").value;
+  $("qaFailSel").innerHTML = f.robots.map(r =>
     `<option value="${r.id}">${r.name}${r.alive ? "" : " · down"}</option>`).join("");
-  if (cur) $("failSel").value = cur;
+  if (cur) $("qaFailSel").value = cur;
 }
 
 /* ---------------------------------------------------------------- scoreboard */
@@ -714,17 +714,15 @@ function arm(mode) {
   else if (S.armed === "zone") { h.hidden = false; h.textContent = "drag a rectangle for a Wi-Fi dead zone"; }
   else h.hidden = true;
 }
-$("btnBox").onclick = () => arm("box");
-$("btnZone").onclick = () => arm("zone");
-$("btnClearBoxes").onclick = () => post("/api/event", { kind: "clear_obstacles" });
-$("btnClearZones").onclick = () => post("/api/event", { kind: "clear_zones" });
-$("btnFail").onclick = () => {
-  const opt = $("failSel").selectedOptions[0];
+$("qaClearBoxes").onclick = () => post("/api/event", { kind: "clear_obstacles" });
+$("qaClearZones").onclick = () => post("/api/event", { kind: "clear_zones" });
+$("qaFail").onclick = () => {
+  const opt = $("qaFailSel").selectedOptions[0];
   const name = opt ? opt.textContent : "the selected robot";
   if (!confirm(`Fail ${name}? Its task will be re-auctioned to another robot.`)) return;
-  post("/api/event", { kind: "robot_fail", payload: +$("failSel").value });
+  post("/api/event", { kind: "robot_fail", payload: +$("qaFailSel").value });
 };
-$("btnRecover").onclick = () => post("/api/event", { kind: "robot_recover", payload: +$("failSel").value });
+$("qaRecover").onclick = () => post("/api/event", { kind: "robot_recover", payload: +$("qaFailSel").value });
 $("btnKill").onclick = () => {
   if (!confirm("Simulate dashboard failure? The fleet will keep operating with no central coordinator.")) return;
   post("/api/event", { kind: "dashboard_kill" });
@@ -760,7 +758,6 @@ $("sidenav").querySelectorAll("button").forEach(b => b.addEventListener("click",
 /* ---------------------------------------------------------------- quick actions */
 $("qaDropBox").onclick = () => arm("box");
 $("qaDeadZone").onclick = () => arm("zone");
-$("qaFailRobot").onclick = () => openDrawer("demonstrateDrawer");
 $("qaMore").onclick = () => openDrawer("demonstrateDrawer");
 
 $("heatToggle").onchange = (e) => {

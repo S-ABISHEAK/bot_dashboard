@@ -154,6 +154,33 @@
       </button>
     </div>
 
+    <!-- ───────────────── quick actions (top, frequently used) ───────────────── -->
+    <section class="panel">
+      <div class="panel-hd"><h2>Quick Actions</h2><span class="hint">common demo actions — resilience demo under Demonstrate</span></div>
+      <div class="quick-actions">
+        <button class="qa-chip" id="qaDropBox" data-arm="box">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          Drop Obstacle
+        </button>
+        <button class="qa-chip qa-chip-ghost" id="qaClearBoxes">Clear Boxes</button>
+        <span class="qa-sep"></span>
+        <button class="qa-chip" id="qaDeadZone" data-arm="zone">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12.5a10 10 0 0114 0M8.5 16a5 5 0 017 0M12 19.5v.1M2 2l20 20"/></svg>
+          Wi-Fi Dead Zone
+        </button>
+        <button class="qa-chip qa-chip-ghost" id="qaClearZones">Clear Zones</button>
+        <span class="qa-sep"></span>
+        <select id="qaFailSel" class="sel qa-sel"></select>
+        <button class="qa-chip qa-chip-danger" id="qaFail">Fail Robot</button>
+        <button class="qa-chip qa-chip-ghost" id="qaRecover">Recover</button>
+        <span class="qa-sep"></span>
+        <button class="qa-chip" id="qaMore">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
+          Resilience Demo
+        </button>
+      </div>
+    </section>
+
     <!-- ───────────────── content ───────────────── -->
     <div class="content" id="content">
 
@@ -253,38 +280,6 @@
               <thead><tr><th>ID</th><th>Status</th><th>Route</th><th>Robot</th><th>Progress</th></tr></thead>
               <tbody id="taskProgressBody"></tbody>
             </table>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-hd"><h2>Quick Actions</h2><span class="hint">common demo actions — resilience demo under Demonstrate</span></div>
-          <div class="quick-actions">
-            <div class="qa-pair">
-              <button class="qa-btn" id="qaDropBox" data-arm="box">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                Drop Obstacle
-              </button>
-              <button class="qa-btn-sm" id="qaClearBoxes">Clear Boxes</button>
-            </div>
-            <div class="qa-pair">
-              <button class="qa-btn" id="qaDeadZone" data-arm="zone">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12.5a10 10 0 0114 0M8.5 16a5 5 0 017 0M12 19.5v.1M2 2l20 20"/></svg>
-                Create Wi-Fi Dead Zone
-              </button>
-              <button class="qa-btn-sm" id="qaClearZones">Clear Zones</button>
-            </div>
-            <div class="qa-fail">
-              <div class="qa-fail-label">Robot Failure</div>
-              <div class="tgroup">
-                <select id="qaFailSel" class="sel"></select>
-                <button class="btn btn-danger" id="qaFail">Fail Robot</button>
-                <button class="btn" id="qaRecover">Recover Robot</button>
-              </div>
-            </div>
-            <button class="qa-btn" id="qaMore">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
-              Resilience Demo
-            </button>
           </div>
         </section>
 

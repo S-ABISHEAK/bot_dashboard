@@ -238,33 +238,23 @@ svg.icon{width:1em;height:1em;flex-shrink:0;vertical-align:-.15em}
   display:flex;align-items:center;gap:8px}
 .panel-hd h2 svg{color:var(--accent)}
 
-/* ───────────────── quick actions ───────────────── */
-.quick-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;padding:12px 15px}
-.qa-btn{
-  display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 10px;
-  background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-sm);
-  color:var(--ink);cursor:pointer;font-size:11.5px;font-weight:600;transition:border-color .12s,background .12s;
+/* ───────────────── quick actions (compact single-line toolbar) ───────────────── */
+.quick-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 15px}
+.qa-sep{width:1px;align-self:stretch;background:var(--border);margin:2px 2px}
+.qa-chip{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 13px;white-space:nowrap;
+  background:var(--panel-2);border:1px solid var(--border);border-radius:999px;
+  color:var(--ink);cursor:pointer;font-size:12px;font-weight:600;transition:border-color .12s,background .12s;
 }
-.qa-btn svg{width:22px;height:22px;color:var(--ink-2)}
-.qa-btn:hover{border-color:var(--accent);background:var(--accent-dim)}
-.qa-btn.danger:hover{border-color:var(--danger);background:var(--danger-dim)}
-.qa-btn.armed{border-color:var(--warn);background:var(--warn-dim);color:var(--warn)}
-.qa-btn.armed svg{color:var(--warn)}
-.qa-pair{display:flex;flex-direction:column;gap:6px}
-.qa-pair .qa-btn{flex:1}
-.qa-btn-sm{
-  background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-sm);
-  color:var(--ink-2);cursor:pointer;font-size:11px;font-weight:600;padding:6px 8px;
-  transition:border-color .12s,background .12s,color .12s;
-}
-.qa-btn-sm:hover{border-color:var(--accent);color:var(--ink);background:var(--accent-dim)}
-.qa-fail{
-  grid-column:1/-1;display:flex;flex-direction:column;gap:8px;padding:12px;
-  background:var(--panel-2);border:1px solid var(--border);border-radius:var(--r-sm);
-}
-.qa-fail-label{font-size:10.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em}
-.qa-fail .tgroup{background:transparent;border:0;padding:0}
-.qa-fail .sel{flex:1;min-width:120px}
+.qa-chip svg{width:15px;height:15px;color:var(--ink-2)}
+.qa-chip:hover{border-color:var(--accent);background:var(--accent-dim)}
+.qa-chip.armed{border-color:var(--warn);background:var(--warn-dim);color:var(--warn)}
+.qa-chip.armed svg{color:var(--warn)}
+.qa-chip-ghost{color:var(--ink-2);font-weight:500}
+.qa-chip-ghost:hover{color:var(--ink)}
+.qa-chip-danger{border-color:rgba(255,77,94,.5);background:var(--danger-dim);color:#ffc7cc}
+.qa-chip-danger:hover{border-color:var(--danger);background:rgba(255,77,94,.28)}
+.qa-sel{padding:7px 9px;font-size:12px;border-radius:999px}
 
 /* ───────────────── content grid (Observe workspace) ─────────────────
    Kept as a 2-column grid (narrower status column + wide map/analysis

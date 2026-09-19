@@ -253,23 +253,33 @@
         </section>
 
         <section class="panel">
-          <div class="panel-hd"><h2>Quick Actions</h2><span class="hint">common demo actions — full toolkit under Demonstrate</span></div>
+          <div class="panel-hd"><h2>Quick Actions</h2><span class="hint">common demo actions — resilience demo under Demonstrate</span></div>
           <div class="quick-actions">
-            <button class="qa-btn" id="qaDropBox" data-arm="box">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-              Drop Obstacle
-            </button>
-            <button class="qa-btn" id="qaDeadZone" data-arm="zone">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12.5a10 10 0 0114 0M8.5 16a5 5 0 017 0M12 19.5v.1M2 2l20 20"/></svg>
-              Create Wi-Fi Dead Zone
-            </button>
-            <button class="qa-btn danger" id="qaFailRobot">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
-              Fail a Robot
-            </button>
+            <div class="qa-pair">
+              <button class="qa-btn" id="qaDropBox" data-arm="box">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                Drop Obstacle
+              </button>
+              <button class="qa-btn-sm" id="qaClearBoxes">Clear Boxes</button>
+            </div>
+            <div class="qa-pair">
+              <button class="qa-btn" id="qaDeadZone" data-arm="zone">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12.5a10 10 0 0114 0M8.5 16a5 5 0 017 0M12 19.5v.1M2 2l20 20"/></svg>
+                Create Wi-Fi Dead Zone
+              </button>
+              <button class="qa-btn-sm" id="qaClearZones">Clear Zones</button>
+            </div>
+            <div class="qa-fail">
+              <div class="qa-fail-label">Robot Failure</div>
+              <div class="tgroup">
+                <select id="qaFailSel" class="sel"></select>
+                <button class="btn btn-danger" id="qaFail">Fail Robot</button>
+                <button class="btn" id="qaRecover">Recover Robot</button>
+              </div>
+            </div>
             <button class="qa-btn" id="qaMore">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
-              More Actions
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
+              Resilience Demo
             </button>
           </div>
         </section>
@@ -383,31 +393,7 @@
     <button class="drawer-close" data-close-drawer aria-label="Close">✕</button>
   </div>
   <div class="drawer-body">
-    <div class="drawer-section">
-      <h3>Obstacles</h3>
-      <div class="tgroup">
-        <button class="btn btn-arm" id="btnBox" data-arm="box">Drop Obstacle</button>
-        <button class="btn" id="btnClearBoxes">Clear Boxes</button>
-      </div>
-      <p class="hint" style="margin-top:6px">Forces D* Lite to replan around the blocked cell.</p>
-    </div>
-    <div class="drawer-section">
-      <h3>Wi-Fi Dead Zone</h3>
-      <div class="tgroup">
-        <button class="btn btn-arm" id="btnZone" data-arm="zone">Create Wi-Fi Dead Zone</button>
-        <button class="btn" id="btnClearZones">Clear Zones</button>
-      </div>
-      <p class="hint" style="margin-top:6px">Robots inside lose the mesh and fall back to local sensing only.</p>
-    </div>
-    <div class="drawer-section">
-      <h3>Robot Failure</h3>
-      <div class="tgroup">
-        <select id="failSel" class="sel"></select>
-        <button class="btn btn-danger" id="btnFail">Fail Robot</button>
-        <button class="btn" id="btnRecover">Recover Robot</button>
-      </div>
-      <p class="hint" style="margin-top:6px">Failing a robot re-auctions its task to another robot via ACBBA.</p>
-    </div>
+    <p class="hint">Drop Obstacle, Wi-Fi Dead Zone, and Fail/Recover Robot now live in Quick Actions on the Operate dashboard.</p>
     <div class="drawer-section">
       <h3>Resilience</h3>
       <button class="btn btn-danger-outline" id="btnKill" style="width:100%;justify-content:center">Simulate Dashboard Failure</button>

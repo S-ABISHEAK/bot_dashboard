@@ -5,9 +5,9 @@
 "use strict";
 
 const STATUS_COLORS = {
-  active: "#22c55e", waiting: "#f59e0b", rerouting: "#fb923c",
-  charging: "#ef4444", "comms-lost": "#a855f7", idle: "#64748b",
-  parked: "#8b95a5", error: "#ef4444", stranded: "#f43f5e",
+  active: "#20E6A0", waiting: "#FFB52E", rerouting: "#FF8A3D",
+  charging: "#FFB52E", "comms-lost": "#26D9FF", idle: "#64748b",
+  parked: "#7C8CA6", error: "#FF4D5E", stranded: "#FF4D5E",
 };
 
 const S = {
@@ -355,8 +355,8 @@ function dispatch(msg) {
 
 function setConn(ok) {
   const c = $("conn");
-  c.className = "conn " + (ok ? "online" : "offline");
-  c.querySelector("span").textContent = ok ? "connected" : "reconnecting…";
+  c.className = "conn-pill " + (ok ? "online" : "offline");
+  c.querySelector("span").textContent = ok ? "Connected" : "Reconnecting…";
 }
 
 /* ---------------------------------------------------------------- layout */
@@ -412,9 +412,17 @@ function onFrame(d) {
 }
 
 function onStatus(msg) {
-  if ("running" in msg) { S.running = msg.running; $("btnStart").textContent = msg.running ? "Pause" : "Start"; }
+  if ("running" in msg) { S.running = msg.running; setSimStatus(msg.running); }
   if ("speed" in msg && msg.speed) { S.speed = msg.speed; markSpeed(); }
   if (msg.note) $("replayHint").textContent = msg.note;
+}
+
+function setSimStatus(running) {
+  $("btnStart").querySelector(".lbl").textContent = running ? "Pause" : "Start";
+  $("btnStart").classList.toggle("is-running", running);
+  $("simStatusPill").classList.toggle("paused", !running);
+  $("simStatusTitle").textContent = running ? "Simulation Running" : "Simulation Paused";
+  $("simStatusSub").textContent = running ? "Fleet operating normally" : "Press Start to begin";
 }
 
 /* ---------------------------------------------------------------- draw loop */
@@ -469,12 +477,54 @@ function renderPanels(f) {
   $("kpiConf").textContent = k.conflicts;
   $("kpiAvoid").textContent = k.avoided;
   $("simTime").textContent = `t = ${f.sim_time_s.toFixed(1)} s`;
+  S.hasProgress = k.completed > 0 || k.active_tasks > 0;
 
   renderRobots(f);
   renderFleetLog(f);
   renderActivity(f);
+  renderSystemHealth(f);
+  renderTaskProgress(f);
   renderSummary(f);
   populateSelects(f);
+}
+
+function renderSystemHealth(f) {
+  const row = (label, iconPath, status, text) => `
+    <div class="sh-row">
+      <span class="lbl"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2">${iconPath}</svg>${label}</span>
+      <span class="sh-status ${status}"><span class="dot"></span>${text}</span>
+    </div>`;
+  const wsOk = S.ws && S.ws.readyState === 1;
+  $("syshealth").innerHTML =
+    row("Backend", '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>', "ok", "Healthy") +
+    row("Simulation", '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+        S.running ? "ok" : "warn", S.running ? "Running" : "Paused") +
+    row("WebSocket", '<path d="M5 12.5a10 10 0 0114 0M8.5 16a5 5 0 017 0M12 19.5v.1"/>',
+        wsOk ? "ok" : "bad", wsOk ? "Connected" : "Reconnecting") +
+    row("Mesh", '<circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/>',
+        f.activity.in_dead_zone > 0 ? "warn" : "ok",
+        `${f.activity.connected}/${f.activity.connected + f.activity.in_dead_zone} online`);
+}
+
+function renderTaskProgress(f) {
+  const order = { active: 0, blocked: 1, queued: 2, done: 3 };
+  const rows = [...f.tasks].sort((a, b) => order[a.status] - order[b.status] || a.id - b.id).slice(0, 30);
+  const tb = $("taskProgressBody");
+  tb.innerHTML = "";
+  for (const t of rows) {
+    const pct = t.status === "done" ? 100 : t.status === "active" ? 55 : 0;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>#${t.id}</td>
+      <td><span class="tstatus ${t.status}">${t.status}</span></td>
+      <td>${t.rerouted ? '<span class="reroute-tag">RE-ROUTED</span>' : "—"}</td>
+      <td>${t.assignee_name ? t.assignee_name.split("-")[1] : "—"}</td>
+      <td><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div></td>`;
+    tb.appendChild(tr);
+  }
+  const k = f.kpi;
+  $("taskProgressHint").textContent =
+    `${k.queued_tasks} queued · ${k.active_tasks} active · ${k.completed}/${k.total} done`;
 }
 
 function renderRobots(f) {
@@ -556,15 +606,34 @@ function renderFleetLog(f) {
     + (k.blocked_tasks ? ` · ${k.blocked_tasks} blocked` : "");
 }
 
+const ACT_ICONS = {
+  route: '<path d="M4 20l6-14 4 8 3-5 3 11"/>',
+  grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+  orca: '<circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 3"/>',
+  auction: '<path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/>',
+  mesh: '<path d="M5 12.5a10 10 0 0114 0M8.5 16a5 5 0 017 0M12 19.5v.1"/>',
+};
+
 function renderActivity(f) {
   const a = f.activity;
-  $("activity").innerHTML = `
-    <div class="act"><div class="k">D* Lite replans (tick / total)</div><div class="v">${a.astar_replans_tick} / ${a.astar_replans}</div></div>
-    <div class="act"><div class="k">MD-PIBT priority pushes / tick</div><div class="v">${a.pibt_pushes_tick}</div></div>
-    <div class="act"><div class="k">Robots avoiding now</div><div class="v">${a.avoiding_now}</div></div>
-    <div class="act"><div class="k">Mesh online / lost</div><div class="v">${a.connected} / ${a.in_dead_zone}</div></div>
-    <div class="act"><div class="k">Body near-misses</div><div class="v">${f.kpi.near_miss}</div></div>
-    <div class="act"><div class="k">Last ACBBA auction</div><div class="v small">${a.last_auction}</div></div>`;
+  const row = (icon, label, val, tip, mesh, small) => `
+    <div class="act${mesh ? " mesh" : ""}" title="${tip}">
+      <div class="ic"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2">${ACT_ICONS[icon]}</svg></div>
+      <div class="body"><div class="k">${label}</div><div class="v${small ? " small" : ""}">${val}</div></div>
+    </div>`;
+  $("activity").innerHTML =
+    row("route", "D* Lite replans (tick/total)", `${a.astar_replans_tick} / ${a.astar_replans}`,
+        "D* Lite: incremental path planning around racks and dropped obstacles.") +
+    row("grid", "MD-PIBT priority pushes/tick", a.pibt_pushes_tick,
+        "MD-PIBT: multi-agent pathfinding — conflict-free next-cell moves with priority inheritance.") +
+    row("orca", "Robots avoiding now", a.avoiding_now,
+        "NH-ORCA: reciprocal local collision avoidance between nearby robots.") +
+    row("mesh", "Mesh online / lost", `${a.connected} / ${a.in_dead_zone}`,
+        "Zenoh-style comms mesh — robots in a Wi-Fi dead zone fall back to local sensing only.", true) +
+    row("orca", "Body near-misses", f.kpi.near_miss,
+        "Close-proximity events the collision-avoidance layer had to resolve.") +
+    row("auction", "Last ACBBA auction", a.last_auction,
+        "ACBBA: decentralised auction-based task allocation — robots bid for jobs.", false, true);
 }
 
 function renderSummary(f) {
@@ -622,7 +691,10 @@ $("btnApply").onclick = () => post("/api/config", {
 });
 $("btnStart").onclick = () => post("/api/control", { action: S.running ? "pause" : "start" });
 $("btnStep").onclick = () => post("/api/control", { action: "step" });
-$("btnReset").onclick = () => post("/api/control", { action: "reset" });
+$("btnReset").onclick = () => {
+  if (S.hasProgress && !confirm("Reset simulation? Current progress will be lost.")) return;
+  post("/api/control", { action: "reset" });
+};
 $("benchToggle").onchange = (e) => post("/api/benchmark", { on: e.target.checked });
 
 $("speedSeg").addEventListener("click", (e) => {
@@ -635,8 +707,8 @@ function markSpeed() {
 
 function arm(mode) {
   S.armed = S.armed === mode ? null : mode;
-  $("btnBox").classList.toggle("armed", S.armed === "box");
-  $("btnZone").classList.toggle("armed", S.armed === "zone");
+  document.querySelectorAll('[data-arm="box"]').forEach(b => b.classList.toggle("armed", S.armed === "box"));
+  document.querySelectorAll('[data-arm="zone"]').forEach(b => b.classList.toggle("armed", S.armed === "zone"));
   const h = $("armHint");
   if (S.armed === "box") { h.hidden = false; h.textContent = "click a cell, or drag a rectangle, to drop a block"; }
   else if (S.armed === "zone") { h.hidden = false; h.textContent = "drag a rectangle for a Wi-Fi dead zone"; }
@@ -646,9 +718,50 @@ $("btnBox").onclick = () => arm("box");
 $("btnZone").onclick = () => arm("zone");
 $("btnClearBoxes").onclick = () => post("/api/event", { kind: "clear_obstacles" });
 $("btnClearZones").onclick = () => post("/api/event", { kind: "clear_zones" });
-$("btnFail").onclick = () => post("/api/event", { kind: "robot_fail", payload: +$("failSel").value });
+$("btnFail").onclick = () => {
+  const opt = $("failSel").selectedOptions[0];
+  const name = opt ? opt.textContent : "the selected robot";
+  if (!confirm(`Fail ${name}? Its task will be re-auctioned to another robot.`)) return;
+  post("/api/event", { kind: "robot_fail", payload: +$("failSel").value });
+};
 $("btnRecover").onclick = () => post("/api/event", { kind: "robot_recover", payload: +$("failSel").value });
-$("btnKill").onclick = () => post("/api/event", { kind: "dashboard_kill" });
+$("btnKill").onclick = () => {
+  if (!confirm("Simulate dashboard failure? The fleet will keep operating with no central coordinator.")) return;
+  post("/api/event", { kind: "dashboard_kill" });
+};
+
+/* ---------------------------------------------------------------- drawers */
+function openDrawer(id) {
+  document.querySelectorAll(".drawer.open").forEach(d => d.classList.remove("open"));
+  const d = $(id);
+  if (d) d.classList.add("open");
+  $("drawerBackdrop").classList.add("open");
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("on", b.dataset.drawer === id));
+}
+function closeDrawers() {
+  document.querySelectorAll(".drawer.open").forEach(d => d.classList.remove("open"));
+  $("drawerBackdrop").classList.remove("open");
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("on", b.dataset.nav === "operate"));
+}
+document.querySelectorAll("[data-drawer]").forEach(b => b.addEventListener("click", () => openDrawer(b.dataset.drawer)));
+document.querySelectorAll("[data-close-drawer]").forEach(b => b.addEventListener("click", closeDrawers));
+$("drawerBackdrop").addEventListener("click", closeDrawers);
+document.querySelector('[data-nav="operate"]').addEventListener("click", closeDrawers);
+
+/* mobile sidebar (narrow widths only — .menu-toggle is hidden otherwise) */
+function toggleSidebar(open) {
+  $("sidebar").classList.toggle("open", open);
+  $("sidebarScrim").classList.toggle("open", open);
+}
+$("btnMenuToggle").onclick = () => toggleSidebar(!$("sidebar").classList.contains("open"));
+$("sidebarScrim").addEventListener("click", () => toggleSidebar(false));
+$("sidenav").querySelectorAll("button").forEach(b => b.addEventListener("click", () => toggleSidebar(false)));
+
+/* ---------------------------------------------------------------- quick actions */
+$("qaDropBox").onclick = () => arm("box");
+$("qaDeadZone").onclick = () => arm("zone");
+$("qaFailRobot").onclick = () => openDrawer("demonstrateDrawer");
+$("qaMore").onclick = () => openDrawer("demonstrateDrawer");
 
 $("heatToggle").onchange = (e) => {
   arenaStack.heat = e.target.checked;
@@ -1010,6 +1123,23 @@ function bindEditInput(cv) {
   cv.addEventListener("mouseleave", () => { S.editHover = null; });
   window.addEventListener("mouseup", () => { S.editPainting = false; });
 }
+
+/* ---------------------------------------------------------------- keyboard shortcuts
+   Space=Start/Pause, S=Step, R=Reset (still confirmed), Esc=close drawer /
+   exit armed tool / exit layout editor. Every shortcut has a visible button
+   equivalent — never the only way to operate. Inert while typing. */
+document.addEventListener("keydown", (e) => {
+  const tag = (e.target.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "select" || tag === "textarea") return;
+  if (e.code === "Space") { e.preventDefault(); $("btnStart").click(); }
+  else if (e.key === "s" || e.key === "S") { $("btnStep").click(); }
+  else if (e.key === "r" || e.key === "R") { $("btnReset").click(); }
+  else if (e.key === "Escape") {
+    if (S.editMode) $("btnLayoutCancel").click();
+    else if (S.armed) arm(S.armed);
+    else closeDrawers();
+  }
+});
 
 /* clock */
 setInterval(() => {

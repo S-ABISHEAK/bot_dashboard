@@ -37,7 +37,6 @@ const TOOL_FIELD = { blocked: "blocked", pickup: "pickups", dropoff: "dropoffs",
 const $ = (id) => document.getElementById(id);
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
-const fmtEta = (s) => (s == null ? "—" : s >= 60 ? `${(s / 60).toFixed(1)}m` : `${s.toFixed(0)}s`);
 
 /* ============================================================ Arena
    One canvas + its own draw state.  Instantiated once for the stack and,
@@ -477,7 +476,6 @@ function renderPanels(f) {
   renderRobots(f);
   renderCoordination(f);
   renderFleetLog(f);
-  renderActivity(f);
   renderSystemHealth(f);
   renderTaskProgress(f);
   renderSummary(f);
@@ -605,86 +603,52 @@ function renderRobots(f) {
   $("fleetHint").textContent = `${f.robots.length} AMRs · priority ${f.activity.priority_order.map(n => n.split("-")[1]).join(" › ")}`;
 }
 
-const INTENT_BY_MODE = {
-  active: "deliver", waiting: "hold position", rerouting: "re-routing",
-  charging: "return to charge", idle: "await task", parked: "standby",
-  "comms-lost": "local avoidance only", stranded: "hold — no route", error: "offline",
-};
-const FLOG_NOTES = {
-  stranded: "⚠ SAFE-HOLD — no route to goal",
-  "comms-lost": "⚠ Wi-Fi dead zone — local sensing only",
-  error: "⚠ FAULT — awaiting recovery",
-  rerouting: "⚠ re-routing around a new obstacle",
-};
+function fmtSimClock(t) {
+  const s = Math.max(0, Math.floor(t)), m = Math.floor(s / 60), sec = s % 60;
+  return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
+function flogLineClass(msg) {
+  if (/⚠|FAULT|BLOCKED/.test(msg)) return "warn";
+  if (/back online|back in service|resuming|restored|rejoins|docked at charger/.test(msg)) return "ok";
+  if (/ACBBA|task \d+ ->/.test(msg)) return "info";
+  if (/dead zone|CONNECTIVITY_LOST/.test(msg)) return "cyan";
+  return "";
+}
+const FLOG_ICONS = { warn: "⚠", info: "◆", ok: "✓", cyan: "⇄", "": "•" };
 
 function renderFleetLog(f) {
   const body = $("fleetLogBody");
-  body.innerHTML = "";
-  for (const rb of f.robots) {
-    const cls = "s-" + rb.mode;
-    const dest = rb.path && rb.path.length
-      ? `(${rb.path[rb.path.length - 1].join(", ")})` : "—";
-    const intent = INTENT_BY_MODE[rb.mode] || rb.mode;
-    const note = FLOG_NOTES[rb.mode];
-    const taskCol = rb.task_id != null ? `#${rb.task_id} · ${rb.task_label}` : rb.task_label;
-    const el = document.createElement("div");
-    el.className = `flog-entry st ${cls}`;
-    el.innerHTML = `
-      <div class="flog-hd">
-        <span class="name">${rb.name}<span class="badge st ${cls}">${rb.mode}</span></span>
-        <span class="prio">P${rb.priority}</span>
-      </div>
-      <div class="flog-rows">
-        <span class="k">POS</span><span class="v">(${rb.pos[0].toFixed(1)}, ${rb.pos[1].toFixed(1)})</span>
-        <span class="k">LOC</span><span class="v">${rb.aisle} · ${rb.bay}</span>
-        <span class="k">SPEED</span><span class="v">${rb.speed_mps.toFixed(2)} m/s</span>
-        <span class="k">BATTERY</span><span class="v">${rb.battery.toFixed(0)}%</span>
-        <span class="k">LINK</span><span class="v">${rb.connected ? "online" : "LOST"}</span>
-        <span class="k">HEARTBEAT</span><span class="v">${rb.heartbeat_s.toFixed(1)}s ago</span>
-        <span class="k">TASK</span><span class="v">${taskCol}</span>
-        <span class="k">ETA</span><span class="v">${fmtEta(rb.eta_s)}</span>
-        <span class="k">DEST</span><span class="v">${dest}</span>
-        <span class="k">INTENT</span><span class="v">${intent}</span>
-      </div>
-      ${note ? `<div class="flog-note">${note}</div>` : ""}`;
-    body.appendChild(el);
+  if (!S.flogSeen) S.flogSeen = new Set();
+  if (f.sim_time_s < S.flogLastT) { body.innerHTML = ""; S.flogSeen.clear(); }
+  S.flogLastT = f.sim_time_s;
+
+  for (const e of f.events) {
+    const key = `${e.t}|${e.msg}`;
+    if (S.flogSeen.has(key)) continue;
+    S.flogSeen.add(key);
+    const cls = flogLineClass(e.msg);
+    const line = document.createElement("div");
+    line.className = `flog-line${cls ? " " + cls : ""}`;
+    line.innerHTML =
+      `<span class="t">${fmtSimClock(e.t)}</span>` +
+      `<span class="ic">${FLOG_ICONS[cls]}</span>` +
+      `<span class="m">${escapeHtml(e.msg)}</span>`;
+    body.appendChild(line);
   }
-  const k = f.kpi;
-  $("fleetLogHint").textContent =
-    `${k.queued_tasks} queued · ${k.active_tasks} active · ${k.completed}/${k.total} done`
-    + (k.blocked_tasks ? ` · ${k.blocked_tasks} blocked` : "");
+  while (body.children.length > 200) body.removeChild(body.firstChild);
+  body.scrollTop = body.scrollHeight;
+
+  $("fleetLogHint").textContent = f.events.length
+    ? `live feed · last at ${fmtSimClock(f.events[f.events.length - 1].t)}` : "live feed";
 }
 
 const ACT_ICONS = {
   route: '<path d="M4 20l6-14 4 8 3-5 3 11"/>',
-  grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
   orca: '<circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 3"/>',
-  auction: '<path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/>',
   check: '<path d="M20 6L9 17l-5-5"/>',
   mesh: '<path d="M5 12.5a10 10 0 0114 0M8.5 16a5 5 0 017 0M12 19.5v.1"/>',
 };
-
-function renderActivity(f) {
-  const a = f.activity;
-  const row = (icon, label, val, tip, mesh, small) => `
-    <div class="act${mesh ? " mesh" : ""}" title="${tip}">
-      <div class="ic"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2">${ACT_ICONS[icon]}</svg></div>
-      <div class="body"><div class="k">${label}</div><div class="v${small ? " small" : ""}">${val}</div></div>
-    </div>`;
-  $("activity").innerHTML =
-    row("route", "D* Lite replans (tick/total)", `${a.astar_replans_tick} / ${a.astar_replans}`,
-        "D* Lite: incremental path planning around racks and dropped obstacles.") +
-    row("grid", "MD-PIBT priority pushes/tick", a.pibt_pushes_tick,
-        "MD-PIBT: multi-agent pathfinding — conflict-free next-cell moves with priority inheritance.") +
-    row("orca", "Robots avoiding now", a.avoiding_now,
-        "NH-ORCA: reciprocal local collision avoidance between nearby robots.") +
-    row("mesh", "Mesh online / lost", `${a.connected} / ${a.in_dead_zone}`,
-        "Zenoh-style comms mesh — robots in a Wi-Fi dead zone fall back to local sensing only.", true) +
-    row("orca", "Body near-misses", f.kpi.near_miss,
-        "Close-proximity events the collision-avoidance layer had to resolve.") +
-    row("auction", "Last ACBBA auction", a.last_auction,
-        "ACBBA: decentralised auction-based task allocation — robots bid for jobs.", false, true);
-}
 
 function renderSummary(f) {
   const k = f.kpi, c = k.count;

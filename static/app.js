@@ -5,9 +5,9 @@
 "use strict";
 
 const STATUS_COLORS = {
-  active: "#20E6A0", waiting: "#FFB52E", rerouting: "#FF8A3D",
-  charging: "#FFB52E", "comms-lost": "#26D9FF", idle: "#64748b",
-  parked: "#7C8CA6", error: "#FF4D5E", stranded: "#FF4D5E",
+  active: "#047857", waiting: "#B45309", rerouting: "#C2410C",
+  charging: "#B45309", "comms-lost": "#0E7490", idle: "#64748b",
+  parked: "#5B6B85", error: "#DC2626", stranded: "#DC2626",
 };
 
 const S = {
@@ -137,19 +137,19 @@ class Arena {
 
   _floor(rects = this.rackRects) {
     const { w, h } = this.layout, ctx = this.ctx;
-    ctx.fillStyle = "#0a0f18";
+    ctx.fillStyle = "#F1F4F8";
     ctx.fillRect(0, 0, this.cv.width, this.cv.height);
-    ctx.strokeStyle = "#121a28"; ctx.lineWidth = 1;
+    ctx.strokeStyle = "#E2E7EF"; ctx.lineWidth = 1;
     ctx.beginPath();
     for (let x = 0; x <= w; x += 2) { ctx.moveTo(this.px(x), 0); ctx.lineTo(this.px(x), this.px(h)); }
     for (let y = 0; y <= h; y += 2) { ctx.moveTo(0, this.px(y)); ctx.lineTo(this.px(w), this.px(y)); }
     ctx.stroke();
-    ctx.strokeStyle = "#2b3a52"; ctx.lineWidth = Math.max(2, this.CELL * 0.5);
+    ctx.strokeStyle = "#64748B"; ctx.lineWidth = Math.max(2, this.CELL * 0.5);
     ctx.strokeRect(this.px(0.5), this.px(0.5), this.px(w - 1), this.px(h - 1));
     for (const r of rects) {
       this._roundRect(this.px(r.x) + 1, this.px(r.y) + 1, this.px(r.w) - 2, this.px(r.h) - 2, 3);
-      ctx.fillStyle = "#1a2434"; ctx.fill();
-      ctx.fillStyle = "#222f43"; ctx.fillRect(this.px(r.x) + 1, this.px(r.y) + 1, this.px(r.w) - 2, 2);
+      ctx.fillStyle = "#CBD5E1"; ctx.fill();
+      ctx.fillStyle = "#94A3B8"; ctx.fillRect(this.px(r.x) + 1, this.px(r.y) + 1, this.px(r.w) - 2, 2);
     }
   }
 
@@ -180,15 +180,15 @@ class Arena {
     ctx.fillRect(bx, by, bw, bh);
     ctx.strokeStyle = "rgba(148,163,184,.5)"; ctx.lineWidth = 1.1;
     ctx.setLineDash([5, 3]); ctx.strokeRect(bx, by, bw, bh); ctx.setLineDash([]);
-    ctx.fillStyle = "#9aa5b4";
+    ctx.fillStyle = "#475569";
     ctx.font = `600 ${Math.max(8, C * 0.4)}px Inter, system-ui, sans-serif`;
     ctx.textAlign = "left"; ctx.textBaseline = "bottom";
     ctx.fillText("STANDBY DEPOT", bx, by - 2);
     d.forEach(([sx, sy], i) => {
       this._roundRect(this.px(sx) + C * 0.15, this.px(sy) + C * 0.15, C * 0.7, C * 0.7, 3);
-      ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 1.1; ctx.stroke();
-      ctx.fillStyle = "rgba(148,163,184,.09)"; ctx.fill();
-      ctx.fillStyle = "#8b95a5";
+      ctx.strokeStyle = "#64748B"; ctx.lineWidth = 1.1; ctx.stroke();
+      ctx.fillStyle = "rgba(100,116,139,.12)"; ctx.fill();
+      ctx.fillStyle = "#475569";
       ctx.font = `${C * 0.34}px Inter, system-ui, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(String(i + 1), this.px(sx + 0.5), this.px(sy + 0.56));
@@ -205,8 +205,8 @@ class Arena {
         ctx.fillStyle = color + "22"; ctx.fill();
       }
     };
-    mark(pickups, "#22c55e");
-    mark(dropoffs, "#4f8cff");
+    mark(pickups, "#16A34A");
+    mark(dropoffs, "#2563EB");
     for (const [x, y] of chargers) {
       this._roundRect(this.px(x) + C * 0.12, this.px(y) + C * 0.12, C * 0.76, C * 0.76, 3);
       ctx.fillStyle = "#f59e0b"; ctx.fill();
@@ -223,7 +223,7 @@ class Arena {
       ctx.fillRect(this.px(x), this.px(y), this.px(w), this.px(h));
       ctx.strokeStyle = "rgba(245,158,11,.7)"; ctx.lineWidth = 1.4;
       ctx.setLineDash([6, 4]); ctx.strokeRect(this.px(x), this.px(y), this.px(w), this.px(h)); ctx.setLineDash([]);
-      ctx.fillStyle = "#f2c072"; ctx.font = `600 ${Math.max(9, C * 0.5)}px Inter, system-ui, sans-serif`;
+      ctx.fillStyle = "#92400E"; ctx.font = `600 ${Math.max(9, C * 0.5)}px Inter, system-ui, sans-serif`;
       ctx.textAlign = "left"; ctx.textBaseline = "top";
       ctx.fillText("WI-FI DEAD ZONE", this.px(x) + 4, this.px(y) + 4);
     }
@@ -256,16 +256,16 @@ class Arena {
     const ctx = this.ctx, C = this.CELL;
     for (const [x, y] of cells) {
       this._roundRect(this.px(x) + 1, this.px(y) + 1, C - 2, C - 2, 2);
-      ctx.fillStyle = "#28374c"; ctx.fill();
-      ctx.strokeStyle = "#3c4f6b"; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = "#CBD5E1"; ctx.fill();
+      ctx.strokeStyle = "#94A3B8"; ctx.lineWidth = 1; ctx.stroke();
     }
   }
 
   _paintCursor([x, y], tool) {
     const ctx = this.ctx, C = this.CELL;
-    const colors = { blocked: "#5b8cff", pickup: "#22c55e", dropoff: "#4f8cff",
-                     charger: "#f59e0b", depot: "#94a3b8", erase: "#ef4444" };
-    ctx.strokeStyle = colors[tool] || "#5b8cff";
+    const colors = { blocked: "#3B82F6", pickup: "#16A34A", dropoff: "#2563EB",
+                     charger: "#f59e0b", depot: "#64748B", erase: "#ef4444" };
+    ctx.strokeStyle = colors[tool] || "#3B82F6";
     ctx.lineWidth = 2;
     ctx.strokeRect(this.px(x) + 1, this.px(y) + 1, C - 2, C - 2);
   }
@@ -304,14 +304,14 @@ class Arena {
       ctx.strokeStyle = s; ctx.lineWidth = 2.4; ctx.stroke();
 
       ctx.beginPath(); ctx.arc(x, y, rad, 0, 7);
-      ctx.fillStyle = rb.alive ? rb.color : "#3a4152"; ctx.fill();
-      ctx.strokeStyle = "#0b1220"; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = rb.alive ? rb.color : "#94A3B8"; ctx.fill();
+      ctx.strokeStyle = "#1E293B"; ctx.lineWidth = 1.5; ctx.stroke();
 
       ctx.fillStyle = "#fff"; ctx.font = `700 ${C * 0.42}px Inter, system-ui, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(rb.name.split("-")[1], x, y + 0.5);
 
-      ctx.fillStyle = "#cdd6e4"; ctx.font = `500 ${Math.max(8, C * 0.4)}px Inter, system-ui, sans-serif`;
+      ctx.fillStyle = "#334155"; ctx.font = `500 ${Math.max(8, C * 0.4)}px Inter, system-ui, sans-serif`;
       ctx.textBaseline = "top";
       ctx.fillText(rb.name, x, y + rad + 5);
     }
@@ -470,22 +470,71 @@ window.addEventListener("resize", () => {
 function renderPanels(f) {
   if (!f) return;
   const k = f.kpi;
-  $("kpiRobots").textContent = f.robots.length;
-  $("kpiActive").textContent = k.active_tasks;
-  $("kpiDone").textContent = `${k.completed}/${k.total}`;
-  $("kpiAvg").textContent = k.avg_completion_s == null ? "—" : `${k.avg_completion_s}s`;
-  $("kpiConf").textContent = k.conflicts;
-  $("kpiAvoid").textContent = k.avoided;
   $("simTime").textContent = `t = ${f.sim_time_s.toFixed(1)} s`;
   S.hasProgress = k.completed > 0 || k.active_tasks > 0;
 
+  renderFleetHealth(f);
   renderRobots(f);
+  renderCoordination(f);
   renderFleetLog(f);
   renderActivity(f);
   renderSystemHealth(f);
   renderTaskProgress(f);
   renderSummary(f);
   populateSelects(f);
+}
+
+function renderFleetHealth(f) {
+  const k = f.kpi, c = k.count;
+  const online = f.robots.filter(r => r.alive).length;
+  const faulted = (c.error || 0) + (c.stranded || 0);
+  const chip = (color, label, n) =>
+    `<span class="fh-chip"><i class="dot" style="background:${color}"></i>${label} — ${n}</span>`;
+  const avgTime = k.avg_completion_s == null ? "—" : `${k.avg_completion_s}s`;
+  $("fleetHealth").innerHTML = `
+    <div class="fh-group">
+      <div class="fh-label">Robots Online</div>
+      <div class="fh-big">${online}/${f.robots.length}</div>
+      <div class="fh-breakdown">
+        ${chip("#047857", "Active", c.active)}
+        ${chip("#64748B", "Idle", c.idle)}
+        ${chip("#B45309", "Charging", c.charging)}
+        ${chip("#DC2626", "Faulted", faulted)}
+      </div>
+    </div>
+    <div class="fh-group">
+      <div class="fh-label">Tasks</div>
+      <div class="fh-big">${k.completed}/${k.total}</div>
+      <div class="fh-sub">${k.active_tasks} active · ${k.queued_tasks} queued</div>
+    </div>
+    <div class="fh-group">
+      <div class="fh-label">Avg Task Time</div>
+      <div class="fh-big">${avgTime}</div>
+      <div class="fh-sub"></div>
+    </div>
+    <div class="fh-group">
+      <div class="fh-label">Safety</div>
+      <div class="fh-big">${k.avoided}<small> resolved</small></div>
+      <div class="fh-sub">0 collisions · ${k.near_miss} near-misses</div>
+    </div>`;
+}
+
+function renderCoordination(f) {
+  const a = f.activity, k = f.kpi;
+  const row = (icon, label, val, tip, mesh) => `
+    <div class="act${mesh ? " mesh" : ""}" title="${tip}">
+      <div class="ic"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2">${ACT_ICONS[icon]}</svg></div>
+      <div class="body"><div class="k">${label}</div><div class="v">${val}</div></div>
+    </div>`;
+  $("coordBody").innerHTML =
+    row("orca", "Robots avoiding each other", a.avoiding_now,
+        "NH-ORCA: reciprocal local collision avoidance between nearby robots.") +
+    row("route", "Rerouting now", (f.kpi.count.rerouting || 0),
+        "D* Lite: replanning a robot's route around a new obstacle.") +
+    row("check", "Conflicts resolved (total)", k.avoided,
+        "Avoidance manoeuvres the fleet has completed without a collision.") +
+    row("mesh", "Deadlock time", `${k.deadlock_robot_s.toFixed(1)}s`,
+        "Total robot-seconds spent unable to make progress.", true);
 }
 
 function renderSystemHealth(f) {
@@ -532,7 +581,7 @@ function renderRobots(f) {
   g.innerHTML = "";
   for (const rb of f.robots) {
     const cls = "s-" + rb.mode;
-    const bcol = rb.battery < 20 ? "#ef4444" : rb.battery < 45 ? "#f59e0b" : "#22c55e";
+    const bcol = rb.battery < 20 ? "#DC2626" : rb.battery < 45 ? "#B45309" : "#047857";
     const el = document.createElement("div");
     el.className = `rcard st ${cls}`;
     el.innerHTML = `
@@ -543,8 +592,8 @@ function renderRobots(f) {
       <dl class="rcard-rows">
         <dt>Task</dt><dd>${rb.task_label}</dd>
         <dt>Location</dt><dd>${rb.aisle} · ${rb.bay}</dd>
+        <dt>ETA</dt><dd>${rb.eta_s == null ? "—" : `${rb.eta_s}s`}</dd>
         <dt>Speed</dt><dd>${rb.speed_mps.toFixed(2)} m/s</dd>
-        <dt>Heartbeat</dt><dd>${rb.heartbeat_s.toFixed(1)}s ago</dd>
         <dt>Link</dt><dd>${rb.connected ? "online" : "LOST"}</dd>
       </dl>
       <div class="batt">
@@ -611,6 +660,7 @@ const ACT_ICONS = {
   grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
   orca: '<circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 3"/>',
   auction: '<path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/>',
+  check: '<path d="M20 6L9 17l-5-5"/>',
   mesh: '<path d="M5 12.5a10 10 0 0114 0M8.5 16a5 5 0 017 0M12 19.5v.1"/>',
 };
 
@@ -936,9 +986,12 @@ async function enterEditMode() {
   S.editPainting = false;
   S.editHover = null;
   if (S.running) post("/api/control", { action: "pause" });
+  closeDrawers();
   $("btnEditLayout").classList.add("armed");
-  $("btnEditLayout").textContent = "Exit Editor";
-  $("layoutPalette").hidden = false;
+  $("btnEditLayout").querySelector(".lbl").textContent = "Exit Editor";
+  $("quickActionsRow").hidden = true;
+  $("layoutToolbarRow").hidden = false;
+  $("topActionsTitle").textContent = "Editing Layout";
   $("saveAsRow").hidden = false;
   $("arenaTitleStack").textContent = "Layout Editor — paint racks & stations";
   clearLayoutErrors();
@@ -951,8 +1004,10 @@ function exitEditMode() {
   S.editPainting = false;
   S.editHover = null;
   $("btnEditLayout").classList.remove("armed");
-  $("btnEditLayout").textContent = "Edit Layout";
-  $("layoutPalette").hidden = true;
+  $("btnEditLayout").querySelector(".lbl").textContent = "Custom Layout";
+  $("quickActionsRow").hidden = false;
+  $("layoutToolbarRow").hidden = true;
+  $("topActionsTitle").textContent = "Quick Actions";
   $("saveAsRow").hidden = true;
   clearLayoutErrors();
   $("arenaTitleStack").textContent = S.benchmark

@@ -89,32 +89,16 @@
       </div>
     </header>
 
-    <div class="kpi-row" id="kpiStrip">
-      <div class="kpi-card">
-        <div class="ic"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 8V5a3 3 0 016 0v3M9 13h.01M15 13h.01"/></svg></div>
-        <div><span class="kpi-label">Robots Online</span><span class="kpi-val" id="kpiRobots">–</span></div>
+    <section class="panel">
+      <div class="panel-hd">
+        <h2>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          Fleet Health
+        </h2>
+        <span class="hint">always-on operator summary</span>
       </div>
-      <div class="kpi-card k-violet">
-        <div class="ic"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
-        <div><span class="kpi-label">Active Tasks</span><span class="kpi-val" id="kpiActive">–</span></div>
-      </div>
-      <div class="kpi-card k-ok">
-        <div class="ic"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></div>
-        <div><span class="kpi-label">Completed</span><span class="kpi-val" id="kpiDone">–</span></div>
-      </div>
-      <div class="kpi-card">
-        <div class="ic"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
-        <div><span class="kpi-label">Avg Time</span><span class="kpi-val" id="kpiAvg">–</span></div>
-      </div>
-      <div class="kpi-card k-danger">
-        <div class="ic"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L2.6 18a2 2 0 001.7 3h15.4a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg></div>
-        <div><span class="kpi-label">Conflicts</span><span class="kpi-val" id="kpiConf">–</span></div>
-      </div>
-      <div class="kpi-card k-warn">
-        <div class="ic"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 22s8-4.5 8-11.8A8 8 0 0012 2a8 8 0 00-8 8.2C4 17.5 12 22 12 22z"/><path d="M12 12a2 2 0 100-4 2 2 0 000 4z"/></svg></div>
-        <div><span class="kpi-label">Collisions Avoided</span><span class="kpi-val" id="kpiAvoid">–</span></div>
-      </div>
-    </div>
+      <div class="fleet-health" id="fleetHealth"></div>
+    </section>
 
     <!-- ───────────────── simulation control bar ───────────────── -->
     <div class="simctrl">
@@ -144,7 +128,11 @@
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 12a9 9 0 109-9M3 3v6h6"/></svg>
         Reset
       </button>
-      <button class="btn" id="btnOpenDemonstrate" data-drawer="demonstrateDrawer" style="margin-left:auto">
+      <button class="btn btn-arm" id="btnEditLayout" style="margin-left:auto">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span class="lbl">Custom Layout</span>
+      </button>
+      <button class="btn" id="btnOpenDemonstrate" data-drawer="demonstrateDrawer">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
         Demonstrate
       </button>
@@ -156,8 +144,8 @@
 
     <!-- ───────────────── quick actions (top, frequently used) ───────────────── -->
     <section class="panel">
-      <div class="panel-hd"><h2>Quick Actions</h2><span class="hint">common demo actions — resilience demo under Demonstrate</span></div>
-      <div class="quick-actions">
+      <div class="panel-hd"><h2 id="topActionsTitle">Quick Actions</h2><span class="hint">common demo actions — resilience demo under Demonstrate</span></div>
+      <div class="quick-actions" id="quickActionsRow">
         <button class="qa-chip" id="qaDropBox" data-arm="box">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
           Drop Obstacle
@@ -179,6 +167,27 @@
           Resilience Demo
         </button>
       </div>
+      <div class="quick-actions" id="layoutToolbarRow" hidden>
+        <div class="seg" id="paletteSeg">
+          <button data-tool="blocked" class="on">Rack</button>
+          <button data-tool="pickup">Pickup</button>
+          <button data-tool="dropoff">Dropoff</button>
+          <button data-tool="charger">Charger</button>
+          <button data-tool="depot">Depot</button>
+          <button data-tool="erase">Erase</button>
+        </div>
+        <span class="hint" id="paletteCounts"></span>
+        <span class="qa-sep"></span>
+        <button class="qa-chip" id="btnLayoutValidate">Validate</button>
+        <button class="qa-chip qa-chip-primary" id="btnLayoutApply">Apply Layout</button>
+        <button class="qa-chip qa-chip-ghost" id="btnLayoutClearCanvas">Clear Canvas</button>
+        <button class="qa-chip qa-chip-ghost" id="btnLayoutCancel">Cancel</button>
+      </div>
+    </section>
+
+    <section class="panel" id="layoutErrorsPanel" hidden>
+      <div class="panel-hd"><h2>Layout Issues</h2><span class="hint" id="layoutStatusHint"></span></div>
+      <ul class="eventlog" id="layoutErrors"></ul>
     </section>
 
     <!-- ───────────────── content ───────────────── -->
@@ -189,14 +198,9 @@
           <div class="panel-hd"><h2>Robot Status</h2><span class="hint" id="fleetHint"></span></div>
           <div class="robot-grid" id="robotGrid"></div>
         </section>
-
-        <section class="panel">
-          <div class="panel-hd"><h2>Fleet Log</h2><span class="hint" id="fleetLogHint"></span></div>
-          <div class="fleetlog" id="fleetLogBody"></div>
-        </section>
       </div>
 
-      <div class="col col-right">
+      <div class="col col-center">
         <div class="bench-banner bench-only" hidden>
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 3v18h18M8 17V10M13 17V6M18 17v-4"/></svg>
           Benchmark Mode — running the 5-layer stack against the stop-and-wait baseline side by side
@@ -219,18 +223,18 @@
               <div class="arm-hint" id="armHint" hidden></div>
             </div>
             <div class="legend">
-              <span><i class="dot" style="background:#20E6A0"></i>Active</span>
-              <span><i class="dot" style="background:#FFB52E"></i>Waiting</span>
-              <span><i class="dot" style="background:#FF8A3D"></i>Re-routing</span>
-              <span><i class="dot" style="background:#FFB52E"></i>Charging</span>
-              <span><i class="dot" style="background:#26D9FF"></i>Comms-lost</span>
-              <span><i class="dot" style="background:#FF4D5E"></i>Stranded</span>
+              <span><i class="dot" style="background:#047857"></i>Active</span>
+              <span><i class="dot" style="background:#B45309"></i>Waiting</span>
+              <span><i class="dot" style="background:#C2410C"></i>Re-routing</span>
+              <span><i class="dot" style="background:#B45309"></i>Charging</span>
+              <span><i class="dot" style="background:#0E7490"></i>Comms-lost</span>
+              <span><i class="dot" style="background:#DC2626"></i>Stranded</span>
               <span><i class="dot" style="background:#64748b"></i>Idle</span>
-              <span><i class="dot" style="background:#7C8CA6"></i>Parked</span>
-              <span><i class="sq" style="border-color:#20E6A0"></i>Pickup</span>
-              <span><i class="sq" style="border-color:#168BFF"></i>Drop-off</span>
-              <span><i class="sq" style="background:#FFB52E;border-color:#FFB52E"></i>Charger</span>
-              <span><i class="sq" style="border-color:#9AAAC0"></i>Depot</span>
+              <span><i class="dot" style="background:#5B6B85"></i>Parked</span>
+              <span><i class="sq" style="border-color:#16A34A"></i>Pickup</span>
+              <span><i class="sq" style="border-color:#2563EB"></i>Drop-off</span>
+              <span><i class="sq" style="background:#f59e0b;border-color:#f59e0b"></i>Charger</span>
+              <span><i class="sq" style="border-color:#64748B"></i>Depot</span>
             </div>
           </section>
 
@@ -300,7 +304,25 @@
           </div>
         </section>
       </div>
+
+      <div class="col col-right">
+        <section class="panel">
+          <div class="panel-hd">
+            <h2>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
+              Coordination
+            </h2>
+            <span class="hint">decentralised layers, plain-language</span>
+          </div>
+          <div class="activity" id="coordBody"></div>
+        </section>
+      </div>
     </div>
+
+    <section class="panel">
+      <div class="panel-hd"><h2>Fleet Log</h2><span class="hint" id="fleetLogHint"></span></div>
+      <div class="fleetlog" id="fleetLogBody"></div>
+    </section>
 
     <!-- ───────────────── footer ───────────────── -->
     <footer class="footer">
@@ -337,34 +359,9 @@
     <div class="drawer-section">
       <h3>Warehouse Layout</h3>
       <div class="tgroup">
-        <button class="btn btn-arm" id="btnEditLayout">Edit Layout</button>
         <button class="btn" id="btnResetLayout">Reset to Default</button>
       </div>
-    </div>
-
-    <div class="drawer-section" id="layoutPalette" hidden>
-      <h3>Paint Tool</h3>
-      <div class="seg" id="paletteSeg">
-        <button data-tool="blocked" class="on">Rack</button>
-        <button data-tool="pickup">Pickup</button>
-        <button data-tool="dropoff">Dropoff</button>
-        <button data-tool="charger">Charger</button>
-        <button data-tool="depot">Depot</button>
-        <button data-tool="erase">Erase</button>
-      </div>
-      <p class="hint" style="margin:8px 0">click to place a station · click-drag to paint racks/erase</p>
-      <p class="hint" id="paletteCounts"></p>
-      <div class="tgroup" style="margin-top:10px">
-        <button class="btn" id="btnLayoutValidate">Validate</button>
-        <button class="btn btn-primary" id="btnLayoutApply">Apply Layout</button>
-        <button class="btn" id="btnLayoutClearCanvas">Clear Canvas</button>
-        <button class="btn" id="btnLayoutCancel">Cancel</button>
-      </div>
-    </div>
-
-    <div class="drawer-section" id="layoutErrorsPanel" hidden>
-      <h3>Layout Issues <span class="hint" id="layoutStatusHint"></span></h3>
-      <ul class="eventlog" id="layoutErrors"></ul>
+      <p class="hint" style="margin-top:6px">Use the "Custom Layout" button in the control bar above to paint a new layout.</p>
     </div>
 
     <div class="drawer-section" id="savedLayoutsPanel">

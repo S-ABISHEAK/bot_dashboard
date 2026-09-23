@@ -616,6 +616,13 @@ function flogLineClass(msg) {
   return "";
 }
 const FLOG_ICONS = { warn: "⚠", info: "◆", ok: "✓", cyan: "⇄", "": "•" };
+const FLOG_CATEGORY = { warn: "SAFETY", ok: "RECOVERY", info: "TASK", cyan: "COMMS", "": "SYSTEM" };
+
+function flogRobotFor(msg, robots) {
+  const m = msg.match(/^(AMR-\d+)\b/) || msg.match(/-> ?(AMR-\d+)\b/);
+  if (!m) return null;
+  return robots.find((r) => r.name === m[1]) || null;
+}
 
 function renderFleetLog(f) {
   const body = $("fleetLogBody");
@@ -628,11 +635,17 @@ function renderFleetLog(f) {
     if (S.flogSeen.has(key)) continue;
     S.flogSeen.add(key);
     const cls = flogLineClass(e.msg);
+    const rb = flogRobotFor(e.msg, f.robots);
+    const who = rb
+      ? `<span class="flog-who"><i class="dot" style="background:${rb.color}"></i>${rb.name}</span>`
+      : `<span class="flog-who fleet"><i class="dot"></i>FLEET</span>`;
     const line = document.createElement("div");
     line.className = `flog-line${cls ? " " + cls : ""}`;
     line.innerHTML =
       `<span class="t">${fmtSimClock(e.t)}</span>` +
       `<span class="ic">${FLOG_ICONS[cls]}</span>` +
+      `<span class="flog-cat">${FLOG_CATEGORY[cls]}</span>` +
+      who +
       `<span class="m">${escapeHtml(e.msg)}</span>`;
     body.appendChild(line);
   }

@@ -407,6 +407,18 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .flog-line.info .ic{color:var(--violet)}
 .flog-line.cyan{border-left-color:var(--cyan)}
 .flog-line.cyan .ic{color:var(--cyan)}
+.flog-cat{flex-shrink:0;font-size:9px;font-weight:700;letter-spacing:.04em;
+  color:var(--ink-3);background:var(--raised);border-radius:4px;padding:2px 5px;
+  font-family:var(--sans);white-space:nowrap}
+.flog-line.warn .flog-cat{color:var(--warn);background:var(--warn-dim)}
+.flog-line.ok .flog-cat{color:var(--ok);background:var(--ok-dim)}
+.flog-line.info .flog-cat{color:var(--violet);background:var(--violet-dim)}
+.flog-line.cyan .flog-cat{color:var(--cyan);background:var(--cyan-dim)}
+.flog-who{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;
+  color:var(--ink);font-weight:600;font-size:11px;min-width:58px}
+.flog-who .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.flog-who.fleet{color:var(--ink-3);font-weight:500}
+.flog-who.fleet .dot{background:var(--ink-3)}
 
 /* ───────────────── drawers ───────────────── */
 .drawer-backdrop{

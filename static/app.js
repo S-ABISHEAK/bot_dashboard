@@ -129,7 +129,7 @@ class Arena {
     this._stations();
     this._deadZones(B);
     this._obstacles(B);
-    this._paths(B);
+    this._paths(A, B, t);
     this._robots(A, B, t);
     if (this.bannerEl) this.bannerEl.hidden = B.dashboard;
   }
@@ -269,16 +269,21 @@ class Arena {
     ctx.strokeRect(this.px(x) + 1, this.px(y) + 1, C - 2, C - 2);
   }
 
-  _paths(f) {
+  _paths(A, B, t) {
     const ctx = this.ctx, C = this.CELL;
+    const byId = {};
+    if (A) for (const r of A.robots) byId[r.id] = r;
     this.dashPhase = (this.dashPhase + 0.4) % 16;
-    for (const rb of f.robots) {
+    for (const rb of B.robots) {
       if (!rb.path || rb.path.length < 2) continue;
+      const a = byId[rb.id] || rb;
+      const cx = lerp(a.pos[0], rb.pos[0], t) + 0.5;
+      const cy = lerp(a.pos[1], rb.pos[1], t) + 0.5;
       ctx.strokeStyle = rb.color + "88"; ctx.lineWidth = Math.max(1.5, C * 0.14);
       ctx.lineJoin = "round"; ctx.lineCap = "round";
       ctx.setLineDash([C * 0.5, C * 0.4]); ctx.lineDashOffset = -this.dashPhase;
       ctx.beginPath();
-      ctx.moveTo(this.px(rb.path[0][0] + 0.5), this.px(rb.path[0][1] + 0.5));
+      ctx.moveTo(this.px(cx), this.px(cy));
       for (const [x, y] of rb.path) ctx.lineTo(this.px(x + 0.5), this.px(y + 0.5));
       ctx.stroke(); ctx.setLineDash([]);
     }

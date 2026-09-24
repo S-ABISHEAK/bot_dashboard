@@ -87,20 +87,26 @@ def pgm_to_blocked_cells(raw: bytes):
         return [], [str(e)]
 
     src_h, src_w = gray.shape
-    # nearest-neighbor resample onto the fixed grid — keeps wall edges
-    # crisp for what's typically a mostly-binary floor-plan image
-    ys = (np.arange(C.GRID_H) * src_h // C.GRID_H).clip(0, src_h - 1)
-    xs = (np.arange(C.GRID_W) * src_w // C.GRID_W).clip(0, src_w - 1)
-    resized = gray[np.ix_(ys, xs)]
-
-    blocked_mask = resized < 128
+    # Area/block sampling onto the fixed grid: each grid cell looks at the
+    # *whole* block of source pixels it covers, not just one sampled point.
+    # Point-sampling (picking a single pixel per cell) let thin walls -
+    # often only 1-3px wide in the source image - fall between sample
+    # points and vanish. A cell is blocked if ANY pixel in its block is
+    # dark, so a thin wall crossing even a corner of a cell still
+    # registers - the priority is matching the source image exactly
+    # rather than smoothing away fine detail.
     blocked = []
     for y in range(C.GRID_H):
         if y in (0, C.GRID_H - 1):
             continue
+        y0 = y * src_h // C.GRID_H
+        y1 = max(y0 + 1, (y + 1) * src_h // C.GRID_H)
         for x in range(C.GRID_W):
             if x in (0, C.GRID_W - 1):
                 continue
-            if blocked_mask[y, x]:
+            x0 = x * src_w // C.GRID_W
+            x1 = max(x0 + 1, (x + 1) * src_w // C.GRID_W)
+            block = gray[y0:y1, x0:x1]
+            if block.min() < 128:
                 blocked.append([x, y])
     return blocked, []

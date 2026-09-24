@@ -309,10 +309,6 @@ class Arena {
       ctx.fillStyle = "#fff"; ctx.font = `700 ${C * 0.42}px Inter, system-ui, sans-serif`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(rb.name.split("-")[1], x, y + 0.5);
-
-      ctx.fillStyle = "#334155"; ctx.font = `500 ${Math.max(8, C * 0.4)}px Inter, system-ui, sans-serif`;
-      ctx.textBaseline = "top";
-      ctx.fillText(rb.name, x, y + rad + 5);
     }
   }
 

@@ -3,4 +3,4 @@ __pycache__/
 *.pyc
 static/fleet_demo.mp4
 static/fleet_demo.gif
-data/custom_layouts.json
+data/active_layout.json

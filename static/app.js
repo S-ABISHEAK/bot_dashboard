@@ -995,6 +995,20 @@ $("paletteSeg").addEventListener("click", (e) => {
   [...$("paletteSeg").children].forEach(x => x.classList.toggle("on", x === b));
 });
 
+$("btnLayoutImport").onclick = () => $("layoutImportInput").click();
+
+$("layoutImportInput").onchange = async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  const raw = await file.arrayBuffer();
+  const res = await fetch("/api/layout/import-pgm", { method: "POST", body: raw }).then(r => r.json());
+  if (!res.ok) { renderLayoutErrors(res.errors); return; }
+  if (!S.editMode) await enterEditMode();
+  seedEditBuffer(res.layout);
+  clearLayoutErrors();
+};
+
 $("btnLayoutValidate").onclick = async () => {
   const res = await post("/api/layout/validate", bufferToLayout(S.editBuffer)).then(r => r.json());
   renderLayoutErrors(res.errors);

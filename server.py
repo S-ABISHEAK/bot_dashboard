@@ -12,13 +12,14 @@ import contextlib
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from engine import config as C, render, layout as L
 from engine.active_layout import load_active_layout, save_active_layout
 from engine.layout_store import LayoutStore
+from engine.pgm_import import pgm_to_blocked_cells
 from engine.simulation import Simulation
 
 STATIC = Path(__file__).parent / "static"
@@ -319,6 +320,17 @@ async def api_layout_apply(payload: dict):
 async def api_layout_clear():
     await session.clear_custom_layout()
     return {"ok": True, "config": session.sim.cfg()}
+
+
+@app.post("/api/layout/import-pgm")
+async def api_layout_import_pgm(request: Request):
+    raw = await request.body()
+    blocked, errors = pgm_to_blocked_cells(raw)
+    if errors:
+        return {"ok": False, "errors": errors}
+    layout = {"schema": "fleetnet.custom_layout.v1", "blocked": blocked,
+              "pickups": [], "dropoffs": [], "chargers": [], "depot": []}
+    return {"ok": True, "layout": layout}
 
 
 @app.get("/api/layouts")

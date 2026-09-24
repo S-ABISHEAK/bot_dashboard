@@ -455,6 +455,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 /* ───────────────── responsive ───────────────── */
 @media (max-width:1360px){
   .content{grid-template-columns:1fr}
+  /* Stacked single-column fallback: without this, source order puts
+     col-right (Coordination + Fleet Log) dead last, after every panel in
+     col-center (Map/System Health/Task Progress/Replay). Reorder so it
+     follows Robot Status instead of falling to the very bottom. */
+  .col-left{order:1}
+  .col-right{order:2}
+  .col-center{order:3}
 }
 .menu-toggle[hidden]{display:none}
 @media (max-width:980px){

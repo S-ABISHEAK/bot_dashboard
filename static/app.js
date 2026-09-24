@@ -336,8 +336,8 @@ function ensureStopwaitArena() {
 function connect() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
   S.ws = new WebSocket(`${proto}://${location.host}/ws`);
-  S.ws.onopen = () => setConn(true);
-  S.ws.onclose = () => { setConn(false); setTimeout(connect, 1200); };
+  S.ws.onopen = () => {};
+  S.ws.onclose = () => { setTimeout(connect, 1200); };
   S.ws.onmessage = (e) => dispatch(JSON.parse(e.data));
 }
 
@@ -346,12 +346,6 @@ function dispatch(msg) {
   else if (msg.type === "frame") onFrame(msg.data);
   else if (msg.type === "status") onStatus(msg);
   else if (msg.type === "export") onExport(msg);
-}
-
-function setConn(ok) {
-  const c = $("conn");
-  c.className = "conn-pill " + (ok ? "online" : "offline");
-  c.querySelector("span").textContent = ok ? "Connected" : "Reconnecting…";
 }
 
 /* ---------------------------------------------------------------- layout */

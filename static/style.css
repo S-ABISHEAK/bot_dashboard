@@ -110,23 +110,8 @@ svg.icon{width:1em;height:1em;flex-shrink:0;vertical-align:-.15em}
 
 .main{flex:1;min-width:0;padding:14px 16px;display:flex;flex-direction:column;gap:14px;max-width:1720px}
 
-/* ───────────────── top bar ───────────────── */
-.topbar{
-  display:flex;align-items:center;justify-content:flex-end;gap:16px;
-  background:linear-gradient(180deg,var(--panel),var(--panel-2));
-  border:1px solid var(--border);border-radius:var(--r);
-  padding:10px 16px;box-shadow:var(--shadow);
-}
-.conn-pill{
-  display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:20px;
-  background:var(--panel-2);border:1px solid var(--border);font-size:11px;color:var(--ink-2);
-}
-.conn-pill svg{color:var(--idle)}
-.conn-pill.online{border-color:rgba(4,120,87,.35);color:var(--ink)}
-.conn-pill.online svg{color:var(--ok)}
-.conn-pill.offline{border-color:rgba(220,38,38,.35)}
-.conn-pill.offline svg{color:var(--danger)}
-.conn-pill b{font-weight:600}
+.panel-hd-left{display:flex;align-items:center;gap:8px}
+.panel-hd-right{display:flex;align-items:center;gap:14px}
 
 .clock{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:1px}
 .clock time{font-family:var(--mono);font-size:14px;color:var(--ink)}

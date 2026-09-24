@@ -73,24 +73,24 @@
   <!-- ───────────────── main ───────────────── -->
   <div class="main">
 
-    <header class="topbar">
-      <button class="btn menu-toggle" id="btnMenuToggle" aria-label="Toggle navigation" hidden>
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-      </button>
-      <div class="conn-pill" id="conn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M5 12.5a10 10 0 0114 0M8.5 16a5 5 0 017 0M12 19.5v.1"/></svg><span>connecting…</span></div>
-      <div class="clock">
-        <time id="clock">--:--:--</time>
-        <span class="simtime" id="simTime">t = 0.0 s</span>
-      </div>
-    </header>
-
     <section class="panel">
       <div class="panel-hd">
-        <h2>
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-          Fleet Health
-        </h2>
-        <span class="hint">always-on operator summary</span>
+        <div class="panel-hd-left">
+          <button class="btn menu-toggle" id="btnMenuToggle" aria-label="Toggle navigation" hidden>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          </button>
+          <h2>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Fleet Health
+          </h2>
+        </div>
+        <div class="panel-hd-right">
+          <span class="hint">always-on operator summary</span>
+          <div class="clock">
+            <time id="clock">--:--:--</time>
+            <span class="simtime" id="simTime">t = 0.0 s</span>
+          </div>
+        </div>
       </div>
       <div class="fleet-health" id="fleetHealth"></div>
     </section>

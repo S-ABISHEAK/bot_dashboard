@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from engine import config as C, render, layout as L
+from engine.active_layout import load_active_layout, save_active_layout
 from engine.layout_store import LayoutStore
 from engine.simulation import Simulation
 
@@ -49,9 +50,9 @@ class Session:
     compared against the stop-and-wait baseline."""
 
     def __init__(self):
-        self.custom_layout = None
+        self.custom_layout = load_active_layout()
         self.layout_store = LayoutStore()
-        self.sims = _mk_sims(4, 10, 7)
+        self.sims = _mk_sims(4, 10, 7, self.custom_layout)
         self.benchmark = False
         self.running = False
         self._settle = 0            # extra ticks run after the last task, so
@@ -193,11 +194,13 @@ class Session:
 
     async def apply_custom_layout(self, custom_layout, n_robots, n_tasks, seed):
         self.custom_layout = custom_layout
+        save_active_layout(custom_layout)
         await self.reconfigure(n_robots, n_tasks, seed)
 
     async def clear_custom_layout(self):
         cfg = self.sim.cfg()
         self.custom_layout = None
+        save_active_layout(None)
         await self.reconfigure(cfg["n_robots"], cfg["n_tasks"], cfg["seed"])
 
     async def export(self):

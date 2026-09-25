@@ -662,6 +662,7 @@ class Simulation:
                                 if r.alive and not r.connected),
             "priority_order": [self.robots[i].name for i in self.priority_order],
             "last_auction": self.alloc.log[-1] if self.alloc.log else "—",
+            "last_auction_detail": self.alloc.last_auction,
         }
 
         return {

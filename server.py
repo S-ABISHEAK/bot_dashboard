@@ -9,10 +9,12 @@ browser over a WebSocket; controls arrive as HTTP POSTs.
 """
 import asyncio
 import contextlib
+import json
+import re
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -51,7 +53,7 @@ class Session:
     compared against the stop-and-wait baseline."""
 
     def __init__(self):
-        self.custom_layout = load_active_layout()
+        self.custom_layout, self.custom_layout_id = load_active_layout()
         self.layout_store = LayoutStore()
         self.sims = _mk_sims(4, 10, 7, self.custom_layout)
         self.benchmark = False
@@ -193,14 +195,29 @@ class Session:
         cfg = self.sim.cfg()
         await self.reconfigure(cfg["n_robots"], cfg["n_tasks"], cfg["seed"])
 
-    async def apply_custom_layout(self, custom_layout, n_robots, n_tasks, seed):
+    async def apply_custom_layout(self, custom_layout, n_robots, n_tasks, seed,
+                                   layout_id=None):
+        """Makes `custom_layout` live AND keeps the Saved Layouts library in
+        sync, so nothing painted is ever only-live-and-unsaved:
+        - `layout_id` names an existing library record -> update it in place.
+        - otherwise -> create a new auto-named record, so a brand new
+          painted layout is saved the moment it's applied, not only when the
+          operator remembers to click Save As."""
+        rec = self.layout_store.get(layout_id) if layout_id else None
+        if rec is not None:
+            rec = self.layout_store.update_layout(layout_id, custom_layout)
+        else:
+            rec = self.layout_store.save_new(custom_layout)
         self.custom_layout = custom_layout
-        save_active_layout(custom_layout)
+        self.custom_layout_id = rec["id"]
+        save_active_layout(custom_layout, rec["id"])
         await self.reconfigure(n_robots, n_tasks, seed)
+        return rec
 
     async def clear_custom_layout(self):
         cfg = self.sim.cfg()
         self.custom_layout = None
+        self.custom_layout_id = None
         save_active_layout(None)
         await self.reconfigure(cfg["n_robots"], cfg["n_tasks"], cfg["seed"])
 
@@ -292,7 +309,10 @@ async def api_config(payload: dict):
 async def api_layout_get():
     # whatever is actually running right now, painted or default alike -
     # this is what "Edit Layout" pre-seeds from and "Save Current" captures
-    return {"custom_layout": session.custom_layout or session.sim.world.as_custom_layout()}
+    return {
+        "custom_layout": session.custom_layout or session.sim.world.as_custom_layout(),
+        "layout_id": session.custom_layout_id if session.custom_layout else None,
+    }
 
 
 @app.post("/api/layout/validate")
@@ -307,13 +327,15 @@ async def api_layout_apply(payload: dict):
     errors = L.validate(custom_layout)
     if errors:
         return {"ok": False, "errors": errors}
-    await session.apply_custom_layout(
+    rec = await session.apply_custom_layout(
         custom_layout,
         _clamp(payload.get("n_robots"), 1, C.MAX_ROBOTS, session.sim.cfg()["n_robots"]),
         _clamp(payload.get("n_tasks"), 1, C.MAX_TASKS, session.sim.cfg()["n_tasks"]),
         _clamp(payload.get("seed"), 0, 10_000, session.sim.cfg()["seed"]),
+        layout_id=payload.get("layout_id"),
     )
-    return {"ok": True, "config": session.sim.cfg()}
+    return {"ok": True, "config": session.sim.cfg(),
+            "layout_id": rec["id"], "layout_name": rec["name"]}
 
 
 @app.post("/api/layout/clear")
@@ -346,6 +368,54 @@ async def api_layouts_get(layout_id: str):
     return {"ok": True, "layout": rec}
 
 
+@app.get("/api/layouts/{layout_id}/export")
+async def api_layouts_export(layout_id: str):
+    # Portable .json download of one saved layout - for backup, moving to
+    # another machine, or committing to git. Re-importable via
+    # /api/layouts/import, on this dashboard or any other checkout.
+    rec = session.layout_store.get(layout_id)
+    if rec is None:
+        return {"ok": False, "error": "not found"}
+    body = json.dumps({
+        "fleetnet_layout_export": 1,
+        "name": rec["name"],
+        "layout": rec["layout"],
+    }, indent=2)
+    safe_name = re.sub(r"[^A-Za-z0-9_-]+", "_", rec["name"]).strip("_") or "layout"
+    return Response(
+        content=body, media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}.json"'},
+    )
+
+
+@app.post("/api/layouts/import")
+async def api_layouts_import(request: Request):
+    # Counterpart to the export above (and to the .pgm importer, which only
+    # ever produces blocked cells with no station data). Accepts either the
+    # {fleetnet_layout_export, name, layout} wrapper this server exports, or
+    # a bare custom_layout dict, so a layout saved on one FleetNet install
+    # can be handed to another as a plain file.
+    raw = await request.body()
+    try:
+        payload = json.loads(raw)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return {"ok": False, "errors": ["not a valid JSON layout file"]}
+    if not isinstance(payload, dict):
+        return {"ok": False, "errors": ["not a valid JSON layout file"]}
+    name = None
+    layout = payload
+    if "layout" in payload and isinstance(payload["layout"], dict):
+        name = payload.get("name")
+        layout = payload["layout"]
+    errors = L.validate(layout)
+    if errors:
+        return {"ok": False, "errors": errors}
+    rec = session.layout_store.save_new(
+        layout, base_name=(name or "").strip() or "Imported Layout", prefer_exact_name=True,
+    )
+    return {"ok": True, "layout": rec}
+
+
 @app.post("/api/layouts")
 async def api_layouts_save(payload: dict):
     layout = payload.get("layout")
@@ -370,6 +440,7 @@ async def api_layouts_apply(layout_id: str, payload: dict = None):
         _clamp(payload.get("n_robots"), 1, C.MAX_ROBOTS, cfg["n_robots"]),
         _clamp(payload.get("n_tasks"), 1, C.MAX_TASKS, cfg["n_tasks"]),
         _clamp(payload.get("seed"), 0, 10_000, cfg["seed"]),
+        layout_id=layout_id,
     )
     return {"ok": True, "config": session.sim.cfg()}
 

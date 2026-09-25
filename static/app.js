@@ -28,6 +28,7 @@ const S = {
   editBuffer: null,
   editPainting: false,
   editHover: null,
+  editLayoutId: null,      // saved-library id a re-Apply should update in place, or null = new
   savedLayouts: [],
 };
 
@@ -37,6 +38,19 @@ const TOOL_FIELD = { blocked: "blocked", pickup: "pickups", dropoff: "dropoffs",
 const $ = (id) => document.getElementById(id);
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
+
+let _toastTimer = null;
+function toast(msg, ms = 2600) {
+  const el = $("toast");
+  el.textContent = msg;
+  el.hidden = false;
+  requestAnimationFrame(() => el.classList.add("show"));
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => { el.hidden = true; }, 200);
+  }, ms);
+}
 
 /* ============================================================ Arena
    One canvas + its own draw state.  Instantiated once for the stack and,
@@ -468,6 +482,7 @@ function renderPanels(f) {
   renderFleetLog(f);
   renderSystemHealth(f);
   renderTaskProgress(f);
+  renderTaskAllocation(f);
   renderSummary(f);
   populateSelects(f);
 }
@@ -562,6 +577,36 @@ function renderTaskProgress(f) {
   const k = f.kpi;
   $("taskProgressHint").textContent =
     `${k.queued_tasks} queued · ${k.active_tasks} active · ${k.completed}/${k.total} done`;
+}
+
+function renderTaskAllocation(f) {
+  const box = $("taskAllocBody");
+  const hint = $("taskAllocHint");
+  const auc = f.activity.last_auction_detail;
+  if (!auc || !auc.assignments.length) {
+    box.innerHTML = `<p class="hint">No ACBBA auction has run yet — one fires whenever a robot is idle and a task is queued.</p>`;
+    hint.textContent = "";
+    return;
+  }
+  hint.textContent = `t${auc.tick} · ${auc.assignments.length} task(s) awarded`;
+  box.innerHTML = auc.assignments.map(a => {
+    const rows = a.bids.map((b, i) => `
+      <tr class="${b.robot === a.winner ? "won" : ""}">
+        <td>${b.robot}${b.robot === a.winner ? ' <span class="win-tag">WINNER</span>' : ""}</td>
+        <td class="mono">${b.bid.toFixed(1)}</td>
+        <td>${i === 0 ? "highest time-discounted score" : ""}</td>
+      </tr>`).join("");
+    return `
+      <div class="auction-card">
+        <div class="auction-card-hd">
+          Task #${a.task_id} <span class="mono">(${a.pickup.join(",")}) → (${a.dropoff.join(",")})</span>
+        </div>
+        <table class="tasktable">
+          <thead><tr><th>Robot</th><th>ACBBA bid</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }).join("");
 }
 
 function renderRobots(f) {
@@ -944,9 +989,11 @@ function seedEditBuffer(layoutOrNull) {
 
 async function enterEditMode() {
   let current = null;
+  S.editLayoutId = null;
   try {
     const r = await fetch("/api/layout").then(r => r.json());
     current = r.custom_layout;
+    S.editLayoutId = r.layout_id || null;
   } catch { /* fall through to a blank buffer */ }
   seedEditBuffer(current);
   S.editMode = true;
@@ -1005,6 +1052,7 @@ $("layoutImportInput").onchange = async (e) => {
   const res = await fetch("/api/layout/import-pgm", { method: "POST", body: raw }).then(r => r.json());
   if (!res.ok) { renderLayoutErrors(res.errors); return; }
   if (!S.editMode) await enterEditMode();
+  S.editLayoutId = null;  // a freshly imported image is not any existing saved layout
   seedEditBuffer(res.layout);
   clearLayoutErrors();
 };
@@ -1017,10 +1065,18 @@ $("btnLayoutValidate").onclick = async () => {
 $("btnLayoutApply").onclick = async () => {
   const res = await post("/api/layout", {
     layout: bufferToLayout(S.editBuffer),
+    layout_id: S.editLayoutId,
     n_robots: +$("cfgRobots").value, n_tasks: +$("cfgTasks").value, seed: +$("cfgSeed").value,
   }).then(r => r.json());
-  if (res.ok) exitEditMode();
-  else renderLayoutErrors(res.errors);
+  if (res.ok) {
+    // Apply always saves (new layouts get an auto-generated name; editing a
+    // loaded one updates it in place) - toast so it's clear nothing needs a
+    // separate Save As click, then let the operator rename it if they want.
+    toast(`Saved to library as "${res.layout_name}"`);
+    exitEditMode();
+  } else {
+    renderLayoutErrors(res.errors);
+  }
 };
 
 $("btnLayoutClearCanvas").onclick = () => {
@@ -1059,6 +1115,7 @@ function renderSavedLayouts(list) {
       <td>
         <button class="btn" data-act="load" data-id="${r.id}" data-name="${n}">Load</button>
         <button class="btn btn-primary" data-act="apply" data-id="${r.id}" data-name="${n}">Apply</button>
+        <button class="btn" data-act="export" data-id="${r.id}" data-name="${n}">Export</button>
         <button class="btn" data-act="rename" data-id="${r.id}" data-name="${n}">Rename</button>
         <button class="btn btn-danger" data-act="delete" data-id="${r.id}" data-name="${n}">Delete</button>
       </td>`;
@@ -1079,6 +1136,7 @@ async function loadSavedLayoutIntoEditor(id, name) {
   const res = await fetch(`/api/layouts/${id}`).then(r => r.json());
   if (!res.ok) { alert(res.error || "failed to load layout"); return; }
   if (!S.editMode) await enterEditMode();
+  S.editLayoutId = id;  // re-applying will update this same saved record, not fork a copy
   seedEditBuffer(res.layout.layout);
   clearLayoutErrors();
 }
@@ -1112,9 +1170,22 @@ $("savedLayoutsBody").addEventListener("click", (e) => {
   const { act, id, name } = b.dataset;
   if (act === "load") loadSavedLayoutIntoEditor(id, name);
   else if (act === "apply") applySavedLayout(id);
+  else if (act === "export") window.open(`/api/layouts/${id}/export`, "_blank");
   else if (act === "rename") renameSavedLayout(id, name);
   else if (act === "delete") deleteSavedLayout(id, name);
 });
+
+$("btnImportLayoutJson").onclick = () => $("layoutJsonImportInput").click();
+
+$("layoutJsonImportInput").onchange = async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  const raw = await file.text();
+  const res = await fetch("/api/layouts/import", { method: "POST", body: raw }).then(r => r.json());
+  if (!res.ok) { alert((res.errors || ["import failed"]).join("\n")); return; }
+  fetchAndRenderSavedLayouts();
+};
 
 $("btnSaveCurrentLayout").onclick = async () => {
   const name = prompt("Save the currently running layout as:");

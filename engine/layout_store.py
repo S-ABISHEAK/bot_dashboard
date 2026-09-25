@@ -63,6 +63,35 @@ class LayoutStore:
     def get(self, layout_id):
         return self._records.get(layout_id)
 
+    def save_new(self, layout, base_name="Custom Layout", prefer_exact_name=False):
+        """Save `layout` under a fresh, unique name - used when a
+        newly-painted layout is applied without the operator having picked a
+        name themselves, so nothing is ever lost for lack of a Save As
+        click. With `prefer_exact_name` (imports), `base_name` is used as-is
+        when it isn't already taken, instead of always stamping a
+        timestamp onto it."""
+        if prefer_exact_name and base_name and not self._find_by_name(base_name):
+            return self.save_as(base_name, layout)
+        stamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+        name = f"{base_name} {stamp}"
+        suffix = 2
+        while self._find_by_name(name):
+            name = f"{base_name} {stamp} ({suffix})"
+            suffix += 1
+        return self.save_as(name, layout)
+
+    def update_layout(self, layout_id, layout):
+        """Overwrite the cell data of an existing record in place (name and
+        id unchanged) - used when re-applying edits to a layout that's
+        already linked to a library entry."""
+        rec = self._records.get(layout_id)
+        if rec is None:
+            return None
+        rec["layout"] = layout
+        rec["updated_at"] = _now()
+        self._write()
+        return rec
+
     def save_as(self, name, layout):
         name = (name or "").strip()
         if not name:

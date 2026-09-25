@@ -177,6 +177,7 @@
         <input type="file" id="layoutImportInput" accept=".pgm" hidden>
         <button class="qa-chip" id="btnLayoutValidate">Validate</button>
         <button class="qa-chip qa-chip-primary" id="btnLayoutApply">Apply Layout</button>
+        <span class="hint">Apply also saves this layout to the library below</span>
         <button class="qa-chip qa-chip-ghost" id="btnLayoutClearCanvas">Clear Canvas</button>
         <button class="qa-chip qa-chip-ghost" id="btnLayoutCancel">Cancel</button>
       </div>
@@ -272,6 +273,17 @@
         </section>
 
         <section class="panel">
+          <div class="panel-hd">
+            <h2>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7z"/></svg>
+              Task Allocation — ACBBA auction
+            </h2>
+            <span class="hint" id="taskAllocHint"></span>
+          </div>
+          <div id="taskAllocBody"></div>
+        </section>
+
+        <section class="panel">
           <div class="panel-hd"><h2>Replay &amp; Video</h2><span class="hint" id="replayHint">buffering…</span></div>
           <div class="replay">
             <div class="replay-row">
@@ -352,6 +364,8 @@
       <h3>Saved Layouts <span class="hint" id="savedLayoutsHint"></span></h3>
       <div class="tgroup" style="margin-bottom:8px">
         <button class="btn" id="btnSaveCurrentLayout">Save Current Layout As…</button>
+        <button class="btn" id="btnImportLayoutJson">Import Layout (.json)…</button>
+        <input type="file" id="layoutJsonImportInput" accept=".json,application/json" hidden>
       </div>
       <div class="tgroup" id="saveAsRow" hidden>
         <input type="text" id="saveAsName" placeholder="Layout name…" maxlength="60">
@@ -409,6 +423,8 @@
     </div>
   </div>
 </aside>
+
+<div class="toast" id="toast" hidden></div>
 
 <script src="/static/app.js"></script>
 </body>

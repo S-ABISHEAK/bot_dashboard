@@ -48,6 +48,9 @@ class Allocator:
         self.tasks = tasks
         self.by_id = {t.id: t for t in tasks}
         self.log = []
+        self.last_auction = None   # full bid breakdown of the most recent
+                                    # auction round, for the dashboard's
+                                    # Task Allocation panel (see auction())
 
     def open_tasks(self):
         return [t for t in self.tasks if t.status == "queued"]
@@ -113,13 +116,26 @@ class Allocator:
         else:
             graph = {i: [(i - 1) % n, (i + 1) % n] for i in range(n)}
 
+        marginals = [self._marginal_fn(r.cell, open_ids) for r in idle]
+
+        # Every idle robot's standalone bid on every open task - computed
+        # up front, purely for the dashboard's bid-breakdown display. This
+        # is exactly the score build_bundle() computes for a robot's first
+        # (and, at max_bundle=1, only) pick, so it's an honest read of what
+        # each robot actually offered, not a re-derived approximation.
+        raw_bids = {j: [] for j in open_ids}
+        for i, r in enumerate(idle):
+            for j in open_ids:
+                gain, _ = marginals[i]([], j)
+                raw_bids[j].append((r.name, gain))
+
         agents = [
-            ACBBAAgent(i, open_ids, self._marginal_fn(idle[i].cell, open_ids),
-                       graph[i], _MAX_BUNDLE)
+            ACBBAAgent(i, open_ids, marginals[i], graph[i], _MAX_BUNDLE)
             for i in range(n)
         ]
         run_to_consensus(agents)
 
+        assignments = []
         for i, ag in enumerate(agents):
             if not ag.bundle:
                 continue
@@ -135,3 +151,11 @@ class Allocator:
             winner.last_progress_tick = tick        # fresh heartbeat window
             self.log.append(
                 f"t{tick}: task {t.id} -> {winner.name} (ACBBA bid {ag.y[j]:.0f})")
+            bids_sorted = sorted(raw_bids[j], key=lambda pair: -pair[1])
+            assignments.append({
+                "task_id": t.id, "pickup": list(t.pickup), "dropoff": list(t.dropoff),
+                "winner": winner.name, "winner_bid": round(ag.y[j], 1),
+                "bids": [{"robot": nm, "bid": round(b, 1)} for nm, b in bids_sorted],
+            })
+        if assignments:
+            self.last_auction = {"tick": tick, "assignments": assignments}
